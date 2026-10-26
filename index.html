@@ -31,9 +31,10 @@ button{font-family:inherit;cursor:pointer}
 .hint{font-size:12px;opacity:.75}
 #skip{position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px;background:rgba(0,0,0,.35);border:2px solid #fff;color:#fff;border-radius:6px;padding:7px 12px;font-weight:800;font-size:14px}
 #over{background:rgba(45,45,45,.72)}
+#oCv{width:128px;height:64px}
 #wasted{font:900 58px Impact,"Arial Black",sans-serif;color:#d0102b;letter-spacing:2px;text-shadow:3px 3px 0 #000,-1px -1px 0 #000;transform:scaleY(1.15)}
 #cause{font-size:17px;font-weight:800;max-width:320px;line-height:1.3}
-#fchat{font-size:13px;color:#bbb;font-weight:700}
+#shn{font-size:13px;color:#bbb;font-weight:700}
 #stats{font:900 22px "Arial Black",sans-serif;color:var(--cash);text-shadow:2px 2px 0 #000}
 #best{font-size:14px;font-weight:700;opacity:.9}
 #rank{font-size:15px;font-weight:800;color:var(--gold);border:2px solid var(--gold);padding:6px 12px}
@@ -42,11 +43,13 @@ button{font-family:inherit;cursor:pointer}
 .b:active{transform:translate(2px,2px);box-shadow:2px 2px 0 #000}
 .b2{background:#fff;color:#000}.b3{background:var(--gold);color:#000}
 #over.wait .row{opacity:.3;pointer-events:none}
-#shop{background:rgba(20,6,31,.94);justify-content:flex-start;padding-top:calc(30px + env(safe-area-inset-top))}
-#shop h2{font:900 26px "Arial Black",sans-serif;color:var(--gold);text-shadow:3px 3px 0 #000}
-.it{display:flex;align-items:center;gap:12px;width:100%;max-width:340px;background:#2a0f45;border:2px solid #fff;border-radius:6px;padding:12px;text-align:left;box-shadow:4px 4px 0 #000}
-.it .e{font-size:32px}.it .t{font-weight:900;font-size:16px}.it .d{font-size:12px;opacity:.85;margin-top:2px}
-.it .p{margin-left:auto;background:var(--gold);color:#000;font-weight:900;border:2px solid #000;border-radius:6px;padding:8px 10px;white-space:nowrap}
+#shop{background:rgba(20,6,31,.96);justify-content:flex-start;padding-top:calc(24px + env(safe-area-inset-top));overflow-y:auto;touch-action:pan-y}
+#shop h2{font:900 24px "Arial Black",sans-serif;color:var(--gold);text-shadow:3px 3px 0 #000}
+#shop h3{font-size:13px;font-weight:800;opacity:.75;width:100%;max-width:340px;text-align:left;margin-top:4px}
+.it{display:flex;align-items:center;gap:12px;width:100%;max-width:340px;background:#2a0f45;border:2px solid #fff;border-radius:6px;padding:10px 12px;text-align:left;box-shadow:4px 4px 0 #000;touch-action:pan-y}
+.it .e{font-size:28px}.it .t{font-weight:900;font-size:15px}.it .d{font-size:12px;opacity:.85;margin-top:2px}
+.it .p{margin-left:auto;background:var(--gold);color:#000;font-weight:900;border:2px solid #000;border-radius:6px;padding:7px 10px;white-space:nowrap;font-size:13px}
+.it .p.f{background:#fff}.it .p.on{background:var(--cash)}
 .it.off{opacity:.45}
 #toast{position:absolute;left:50%;top:40%;transform:translateX(-50%);background:#000;border:2px solid var(--gold);padding:10px 14px;border-radius:6px;font-weight:800;font-size:14px;z-index:9;display:none;max-width:300px;text-align:center}
 </style>
@@ -65,15 +68,15 @@ button{font-family:inherit;cursor:pointer}
  <div class="hint">тапни, чтобы листать</div>
 </div>
 <div id="over" class="ov">
+ <canvas id="oCv" class="px" width="64" height="32"></canvas>
  <div id="wasted">ПОТРАЧЕНО</div>
- <div id="cause"></div><div id="fchat">Чат: F F F F F F F</div><div id="stats"></div><div id="best"></div><div id="rank"></div>
+ <div id="cause"></div><div id="shn"></div><div id="stats"></div><div id="best"></div><div id="rank"></div>
  <div class="row"><button id="revive" class="b b3">❤️‍🔥 Второй шанс · 5⭐</button></div>
- <div class="row"><button id="again" class="b">Ещё раз</button><button id="share" class="b b2">Поделиться</button><button id="shopB" class="b b2">⭐ Магазин</button></div>
+ <div class="row"><button id="again" class="b">Ещё раз</button><button id="share" class="b b2">Поделиться</button><button id="shopB" class="b b2">🏎️ Гараж</button></div>
 </div>
 <div id="shop" class="ov">
- <h2>⭐ ЛАРЁК ШНУРКА</h2>
- <div class="hint">оплата Telegram Stars · всё по-честному (почти)</div>
- <div id="items" style="display:flex;flex-direction:column;gap:10px;width:100%;align-items:center"></div>
+ <h2>🏎️ ГАРАЖ ШНУРКА</h2>
+ <div id="items" style="display:flex;flex-direction:column;gap:9px;width:100%;align-items:center"></div>
  <button id="shopX" class="b b2">Закрыть</button>
 </div>
 <div id="toast"></div>
@@ -104,9 +107,11 @@ function hap(k){try{const h=tg&&tg.HapticFeedback;if(!h)return;
 const cloudOk=()=>{try{return tg&&tg.CloudStorage&&tg.isVersionAtLeast('6.9')}catch(e){return false}};
 function load(k,cb){let v=null;try{v=localStorage.getItem(k)}catch(e){}cb(v);try{if(cloudOk())tg.CloudStorage.getItem(k,(er,x)=>{if(!er&&x)cb(x)})}catch(e){}}
 function save(k,v){try{localStorage.setItem(k,v)}catch(e){}try{if(cloudOk())tg.CloudStorage.setItem(k,String(v))}catch(e){}}
-let best=0,owned={gold:0,tips:0};
+let best=0,owned={gold:0,tips:0,skin:'car'},dropDay='';
 load('best',v=>{if(+v>best)best=+v});
 load('owned',v=>{try{const o=JSON.parse(v);if(o)owned=Object.assign(owned,o)}catch(e){}});
+load('drop',v=>{if(v)dropDay=v});
+const saveOwned=()=>save('owned',JSON.stringify(owned));
 const userName=(()=>{try{return tg.initDataUnsafe.user.first_name}catch(e){return 'Аноним'}})();
 
 // ---------- Звук ----------
@@ -118,7 +123,6 @@ function beep(f,d,t,v,f2,delay){if(muted||!AC)return;try{const n=AC.currentTime+
  o.type=t||'square';o.frequency.setValueAtTime(f,n);if(f2)o.frequency.exponentialRampToValueAtTime(f2,n+d);
  g.gain.setValueAtTime(v||.05,n);g.gain.exponentialRampToValueAtTime(.0001,n+d);o.connect(g);g.connect(AC.destination);o.start(n);o.stop(n+d+.02)}catch(e){}}
 const tune=(a,t,v,s)=>a.forEach((f,i)=>beep(f,.12,t||'square',v||.05,0,i*(s||.1)));
-const airhorn=()=>{for(let i=0;i<3;i++){beep(466,.18,'sawtooth',.05,0,i*.22);beep(587,.18,'sawtooth',.04,0,i*.22);beep(698,.18,'sawtooth',.03,0,i*.22)}};
 
 // ---------- Пиксель-спрайты ----------
 const K='#000';
@@ -161,12 +165,14 @@ function shn(open){return mk(32,32,(R,C)=>{const s='#f2c09a',sd='#cf9670',c='#e8
  R(s,23,26,4,4);R(K,25,21,4,7);R('#22e3d4',26,22,2,5)})}
 const SP={
  car:lambo('#ff2d95','#c4126b','#ff8fd0'),gold:lambo('#ffcc33','#c9921a','#fff2a8'),
+ cyan:lambo('#22e3d4','#139c92','#a8fff6'),chrome:lambo('#2b2b35','#111118','#9a9ab0'),
  cop0:cop('#ff2b2b','#2b6bff'),cop1:cop('#2b6bff','#ff2b2b'),
  don0:don(0),don1:don(1),shn0:shn(0),shn1:shn(1),
  '🪙':mk(16,16,(R,C)=>{const d='#a8740f';C('#c9921a',8,8,7);C('#ffcc33',8,8,6);R(d,5,4,6,1);R(d,5,5,1,2);R(d,5,7,6,1);R(d,10,8,1,2);R(d,5,10,6,1);R(d,7,3,2,1);R(d,7,11,2,1);R('#fff7c2',3,5,1,3)}),
  '🚀':mk(12,18,R=>{R('#e8e8f0',3,4,6,9);R('#e8e8f0',4,2,4,2);R('#b8b8c8',7,4,2,8);R('#ff3b3b',5,0,2,2);R('#ff3b3b',4,2,4,1);R('#36c',5,5,2,2);R('#9df',5,5,1,1);R('#ff3b3b',1,9,2,5);R('#ff3b3b',9,9,2,5);R('#ff3b3b',3,12,6,1);R('#ffcc33',4,13,4,2);R('#ff6a00',5,15,2,2)}),
  '💎':mk(16,13,R=>{R('#bff',4,0,8,1);R('#7ef',2,1,12,2);R('#3ce',1,3,14,1);R('#2bd',2,4,12,2);R('#1ac',4,6,8,2);R('#09b',6,8,4,2);R('#078',7,10,2,2);R('#fff',4,1,2,1);R('#fff',3,3,1,1)}),
  '🗿':mk(12,18,R=>{R('#9a9a9a',2,0,8,3);R('#888',1,3,10,12);R('#6a6a6a',9,3,2,12);R('#555',1,6,10,1);R(K,2,7,3,1);R(K,7,7,3,1);R('#777',5,7,2,6);R('#444',4,13,4,1);R('#777',2,15,8,3)}),
+ '🧲':mk(16,15,R=>{R('#e8314f',1,3,5,9);R('#e8314f',10,3,5,9);R('#e8314f',1,10,14,5);R('#a81f37',1,13,14,2);R('#e6e6f0',1,0,5,3);R('#e6e6f0',10,0,5,3);R('#fff',2,4,1,6)}),
  '🐊':mk(12,26,R=>{const g='#3c9a4a';R(g,3,4,6,15);R(g,4,0,4,5);R('#2a6f35',5,6,2,12);R('#fff',4,0,1,1);R('#fff',7,0,1,1);R(K,3,3,6,1);R('#ffcc33',3,6,6,1);
   R(g,1,6,2,3);R(g,9,6,2,3);R(g,1,14,2,3);R(g,9,14,2,3);R(g,5,19,2,5);R(g,5,24,1,2)}),
  '🐻':mk(16,16,(R,C)=>{const b='#8b5a2b';C(b,3,3,2);C(b,12,3,2);C('#e9a',3,3,1);C('#e9a',12,3,1);C(b,8,9,6);C('#d9a066',8,11,3);R(K,7,10,2,1);R(K,5,7,1,2);R(K,10,7,1,2);R(K,4,6,2,1);R(K,10,6,2,1);R('#ff2b2b',7,13,2,1)}),
@@ -195,56 +201,47 @@ function txt(s,x,y,size,col,al,sw,maxW){let f=size;cx.font=FONT(f);const w=cx.me
  cx.textAlign=al||'center';cx.textBaseline='middle';cx.lineJoin='round';const lw=sw===undefined?4:sw;if(lw){cx.lineWidth=lw;cx.strokeStyle=K;cx.strokeText(s,x,y)}cx.fillStyle=col;cx.fillText(s,x,y)}
 
 // ---------- Тексты ----------
-const PH=['HODL!','ЛИКВИДАЦИЯ x100','это не скам, это стратегия','купил дно, дно купило меня','сигма-заезд','аура фарм','SIX SEVEN!!!','WAGMI','NGMI','мама, я в крипте','биток по 67','рагпулл — это просто переоценка','чат, донатьте на бензин','налоговая в чате','TO THE MOON!!!','ламба в кредит, мечта в нал','шорт на бабушку','бро, это фундаментал','графики рисую сам','аллигатор тоже холдер','зашёл на всё, вышел без всего','скам? нет, сюрприз','чат, кто продал?! БАН','плечо x100, мозг x0','стоп-лосс для слабых','мемкоин — это искусство','я не инвестор, я заложник','мой портфель — это мем','фиат для бумеров','покупай слухи, продавай почки','кит в болоте','DYOR = донать и орёт','это не падение, это скидка','пенсия бабушки в работе','сигма не продаёт','токеномика: я богатею','WEN LAMBO? NOW LAMBO','чат, жмём ракету','минус вайб, плюс аура','бро, я в моменте','свечи горят, ламба тоже','скриньте, пока не удалил','мы так рано, что уже поздно','ауры больше, чем мозгов','x67 или бомж','пук в сторону налоговой','бабуля, это иксы!','заносим, пацаны','депозит улетел, я за ним','отвечаю, это дно (нет)','ГЕНИЙ ФИНАНСОВ','вайб-чек пройден','кринж — это тоже актив','лайкни, если тоже бомж'];
-const SHN=['братан, это иксы','я в доле','чат, заносим','щас отскочит, отвечаю','брат, не продавай. я продаю','это всё по плану','я в телеге сигнал видел','давай ещё по плечу','ну я же говорил... наверное','газуй, налоговая сзади!','у меня бабуля тоже в коине','это не я рагпульнул, это рынок','братан, это просто коррекция','чат, лайк — это любовь','я чувствую памп кожей','бро, скинь 67 до пятницы','я не шиллер, я визионер'];
-const DON=['ЧАТ, ЛОВИ ДОНАТ!!!','ЭТО ИКСЫ, ЧАТ!','ПОДПИСКА — ЭТО ЛЮБОВЬ','Я НЕ ПЛАЧУ, ЭТО ВЕТЕР','КТО ПРОДАЛ — ТОТ НПС','ЧАТ, Я ГЕНИЙ? ДА?','ЖМИ РАКЕТУ!!!','МАМ, Я НА ЛАМБЕ!','ШНУРОК, ТЫ УВОЛЕН. ШУЧУ. ИЛИ НЕТ','ЭТО НЕ РЕКЛАМА. ЭТО ЛЮБОВЬ','СТАВЬ ПЛЮС, ЕСЛИ ТЫ СИГМА','Я КУПИЛ ДНО. ДНО КУПИЛО МЕНЯ','ЧАТ, Я НЕ ПЬЯН, Я В КРИПТЕ'];
-const RAP=['🎤 Я на ламбе, ты на маршрутке, мой портфель — это шутка','🎤 Биржа красная, как моё лицо, Шнурок, где моё кольцо?','🎤 Еду на Луну, долги на Земле, налоговая плачет где-то во мгле'];
-const NICK=['Гений_финансов','бабушка_инвестор','ХОЛДЕР_до_гроба','Налоговая_инкогнито','Аллигатор_67','Сигма_из_Мытищ','мама','КИТ_в_болоте','xX_ИКСЫ_Xx','Скамер_не_я','Димон_на_плече','крипто_кот','ауфер2009','пенсия_в_коине'];
-const CHAT=['67 67 67','КРИНЖ','ахахах','где иксы','скам','F','это база','ЛАМБА ЛАМБА','донатыч я твой фанат','шнурок заткнись','мама я в телике','РАГПУЛЛ','бро это ласт','ауф','сигма','+aura','-aura','NPC','купил на хаях','ВЕЗИ НАС НА ЛУНУ','бабушка в чате','налоговая в чате','лол','WAGMI','вайб чек','это не скам','ору','6️⃣7️⃣','верни деньги','скинь кошелёк','кринж-метр взорван','я в доле?','пруфы?','💸💸💸'];
-const DMSG=['Донатыч, верни пенсию, я бабушка','это на бензин, не трать на коины','скажи привет маме, она смотрит','Шнурок, ты должен мне 67 тыщ','купил $AURA67 на всё, жена ушла','сделай сальто на ламбе','ты мой кумир, мне 34 года','где мои иксы, брат?','налоговая, если вы это читаете — это не я','прочитай рэп про бабушку','скажи «шнурок лох» 67 раз','купи мне ламбу, я в чате с 2019'];
-const DAMT=['67 ₽','670 ₽','6 700 ₽','1 337 ₽','100 500 ₽','1 ₽','67 копеек','2 бутерброда'];
-const GOOD={'🪙':{m:10},'🚀':{m:300,t:'ПАМП +300$'},'💎':{m:100,t:'АЛМАЗНЫЕ РУКИ −★'},'🗿':{m:1000,t:'+1000 АУРЫ'}};
+const PH=['HODL!','WAGMI','we\'re so back','+aura','МОГНУЛ','мьюинг не прекращать','это база','имба','few understand','gm, чат','ape in','copium','hopium','сигма-гринд','лукс-чек пройден','jawline +10','hunter eyes активированы','ты не NPC','rizz +67','брейнрот-памп','купил дно (в этот раз реально)','биток по 67','TO THE MOON','diamond hands','paper hands = NGMI','ауры больше, чем мозгов','x67 или бомж','это не скам, это альфа','мама, я в мемкоинах','налоговая в шоке','пампим всем районом','кантальный тилт +5','мьюинг-памп'];
+const SHN=['братан, это иксы','я в доле','бро, не прекращай мьюинг','чат, заносим','it\'s so over… шучу, we\'re so back','бро, ты могнул налоговую','это не скам, это альфа','зашёл в мемкоин на всю ауру','щас памп, отвечаю','держи jawline, брат','я в телеге сигнал видел','брат, не продавай. я продаю','few understand, брат','у тебя аура +67','бро, это не рагпулл, это ребрендинг'];
+const GOOD={'🪙':{m:10},'🚀':{m:300,t:'ПАМП +300$'},'💎':{m:100,t:'АЛМАЗНЫЕ РУКИ −★'},'🗿':{m:1000,t:'МОГНУЛ +1000 АУРЫ'},'🧲':{m:50,t:'МАГНИТ ХАЙПА'}};
 const BAD=['🚓','🐊','🐻','📉','👵','🧾','🐒'];
-const BADT={'🚓':'НАЛОГОВАЯ!','🐊':'АЛЛИГАТОР-ИНВЕСТОР','🐻':'МЕДВЕЖИЙ РЫНОК','📉':'КУПИЛ НА ХАЯХ','👵':'БАБУШКА С ПЛЕЧОМ','🧾':'МАРЖИН-КОЛЛ','🐒':'NFT-ОБЕЗЬЯНА ЗА 0$'};
-const CAUSE={'🚓':['Налоговая нашла кошелёк в стриме','Налоговая задонатила тебе повестку'],'🐊':['Аллигатор купил твои токены и съел тебя','Аллигатор-инвестор зашёл в раунд. Тобой'],'🐻':['Медведь лёг на график. И на тебя','Медвежий рынок обнял слишком крепко'],'📉':['Купил дно, дно купило тебя','Зашёл на хаях всей ламбой'],'👵':['Ликвидирован бабушкой с плечом x100','Бабушка вернула пенсию. Твоим лицом'],'🧾':['Маржин-колл пришёл раньше, чем мама','Биржа закрыла позицию. И ламбу'],'🐒':['Купил NFT-обезьяну. Обезьяна купила тебя','Обезьяна за 0 $ оказалась дороже жизни']};
-const CAUSE_ANY=['Шнурок вышел на хаях. Без тебя','Чат задонатил на похороны 67 рублей','Ламба оказалась в рассрочку на 67 лет','Аура упала ниже нуля','Рагпулл — это просто переоценка тебя','Кринж-метр взорвался вместе со стримом'];
-const RANKS=[[0,'Нищий холдер'],[300,'Бумажные руки'],[1000,'Хомяк с района'],[2500,'Донатный дух'],[5000,'Крипто-бро Лимониды'],[10000,'Кит из болота'],[20000,'Король Бабло-Сити'],[40000,'Сигма Луны 67']];
+const BADT={'🚓':'НАЛОГОВАЯ!','🐊':'АЛЛИГАТОР-КИТ','🐻':'МЕДВЕЖКА','📉':'КУПИЛ НА ХАЯХ','👵':'БАБУШКА В ШОРТЕ x100','🧾':'МАРЖИН-КОЛЛ','🐒':'NFT ЗА 0$'};
+const CAUSE={'🚓':['Налоговая нашла кошелёк в стриме','Налоговая оказалась выше тебя по ауре'],'🐊':['Аллигатор купил твои токены и съел тебя','Аллигатор-кит взял с тебя fanum tax'],'🐻':['Медвежка обняла слишком крепко','Медвежий рынок. Мьюинг не помог'],'📉':['Купил дно, дно купило тебя','Зашёл на хаях всей аурой'],'👵':['Бабушка с плечом x100 тебя могнула','Ликвидирован бабушкой в шорте'],'🧾':['Маржин-колл пришёл раньше, чем мама','Биржа закрыла позицию. И ламбу'],'🐒':['Купил NFT-обезьяну. Обезьяна купила тебя','Обезьяна за 0 $ оказалась дороже твоей ауры']};
+const CAUSE_ANY=['Шнурок вышел на хаях. Без тебя','It\'s over. Налоговая выиграла','Аура упала ниже нуля','Ты NPC, а NPC не ездят на ламбах','Перестал мьюинг на секунду. Этого хватило'];
+const SHN_DEAD=['Шнурок: «it\'s so over, брат»','Шнурок: «я вышел на хаях, сорян»','Шнурок: «ну ты NPC, конечно»','Шнурок: «we\'re so back. завтра»','Шнурок: «это была коррекция, держи»'];
+const RANKS=[[0,'LTN-холдер'],[300,'NPC с района'],[1000,'Мьюер-новичок'],[2500,'MTN'],[5000,'HTN'],[10000,'Чад Лимониды'],[20000,'Гигачад крипты'],[40000,'Сигма Луны 67']];
 const rankOf=m=>{let r=RANKS[0][1];for(const[a,b]of RANKS)if(m>=a)r=b;return r};
 const STAGES=['БАБЛО-СИТИ','КРИПТО-БИРЖА','КОСМОС'];
-const STORY=[['ЭПИЗОД 1: ЗАНОС','<b>Донатыч</b> — стример-миллионер. Говорит только КАПСОМ, раздаёт донаты пачками, IQ скрыт настройками приватности.<br><b>Шнурок</b> — кореш и шиллер. Советует коины, в которые сам не верит.<br>На стриме Донатыч задонатил <i>весь бюджет Бабло-Сити</i> в мемкоин <i>$AURA67</i>. Совет дал Шнурок.'],
- ['ЭПИЗОД 2: РАГПУЛЛ','Коин рагпульнулся за <i>6,7 секунды</i>.<br>За ними гонятся налоговая, обманутые холдеры, аллигатор-инвестор в очках, медведь-рынок и бабушка, которая вложила пенсию.'],
- ['ЭПИЗОД 3: TO THE MOON','Единственный выход — <i>«to the moon»</i>. Буквально.<br><br>◀ ▶ — полосы. Лови монеты, ракеты, алмазы и моаи. 5★ розыска — ПОТРАЧЕНО. 67 монет — <i>SIX SEVEN</i>. Полная шкала кринжа — <i>x2 бабла</i>.']];
+const STORY=[['ЭПИЗОД 1: ЗАНОС','<b>Донатыч</b> — стример-миллионер на луксмаксе: мьюинг 24/7, очки даже ночью, аура не влезает в кадр.<br><b>Шнурок</b> — кореш и шиллер. Советует мемкоины, в которые сам не верит.<br>На стриме Донатыч закинул <i>весь бюджет Бабло-Сити</i> в мемкоин <i>$AURA67</i>. «Few understand», — сказал Шнурок.'],
+ ['ЭПИЗОД 2: РАГПУЛЛ','Коин рагпульнулся за <i>6,7 секунды</i>. It\'s so over.<br>За ними гонятся налоговая, аллигатор-кит, медвежка и бабушка, которая шортила с плечом x100.'],
+ ['ЭПИЗОД 3: TO THE MOON','Единственный выход — <i>на Луну</i>. Буквально.<br><br>◀ ▶ — полосы. Лови 🪙 🚀 💎 🗿 и 🧲 магнит. 5★ розыска — ПОТРАЧЕНО. 67 монет — <i>SIX SEVEN</i>.']];
 
 // ---------- Состояние ----------
 let st='story',G={},grads={},slide=0;
 const LX=l=>W/2+(l-1)*80;
 const STARS=Array.from({length:70},()=>({x:Math.random()*W,y:Math.random()*900,z:.2+Math.random()*.8}));
 function reset(){G={lane:1,px:LX(1),py:H-175,speed:260,dist:0,money:0,stars:0,coins:0,c67:0,objs:[],fx:[],deco:[],six:0,inv:0,hitT:0,shake:0,
- spawnT:1,shT:4,phT:3,donT:6,saidT:2,chatT:.5,bub:null,banner:null,sub:null,alert:null,stage:0,moon:false,moonY:-40,t:0,off:0,decoAcc:0,last:'',safe:-1,
- cringe:0,peak:0,yell:0,chat:[],viewers:6767,revived:false};
- for(let y=-40;y<H;y+=70)addDeco(y);for(let i=0;i<4;i++)chat()}
+ spawnT:1,shT:6,bub:null,banner:null,stage:0,moon:false,moonY:-40,t:0,off:0,decoAcc:0,last:'',safe:-1,shield:0,mag:0,revived:false};
+ for(let y=-40;y<H;y+=70)addDeco(y)}
 reset();
 
 function addDeco(y){for(const side of[0,1]){if(Math.random()<.45)continue;const x=side?W-30+(Math.random()*10-5):30+(Math.random()*10-5),r=Math.random(),s=G.stage;let d;
- if(s===0)d=r<.38?{sp:'palm'}:r<.58?{k:'sw'}:r<.86?{k:'ns',t:rand(['БАБЛО','МОТЕЛЬ','24/7','ЛИМОНИДА','КРИПТО','ЛОМБАРД','ШАУРМА','DONATE','x67','КАЗИНО НЕТ']),c:rand(['#ff2d95','#00f0ff','#ffe600','#39ff14'])}:{sp:'flam'};
- else if(s===1)d=r<.8?{k:'cd',up:Math.random()<.5,h:20+Math.random()*55}:{k:'ns',t:rand(['BTC','PUMP','DUMP','$AURA67','SELL','БАЙ']),c:rand(['#39ff14','#ff3b3b'])};
+ if(s===0)d=r<.38?{sp:'palm'}:r<.58?{k:'sw'}:r<.86?{k:'ns',t:rand(['БАБЛО','МОТЕЛЬ','24/7','ЛИМОНИДА','МЬЮИНГ','ЛОМБАРД','ШАУРМА','AURA','x67','GM']),c:rand(['#ff2d95','#00f0ff','#ffe600','#39ff14'])}:{sp:'flam'};
+ else if(s===1)d=r<.8?{k:'cd',up:Math.random()<.5,h:20+Math.random()*55}:{k:'ns',t:rand(['BTC','PUMP','DUMP','$AURA67','RUG','APE IN']),c:rand(['#39ff14','#ff3b3b'])};
  else d=r<.08?{sp:'ufo'}:r<.2?{k:'pl',r:6+Math.random()*10,c:rand(['#ff7eb6','#7ee8ff','#ffcc33','#b388ff'])}:null;
  if(d){d.x=x;d.y=y;G.deco.push(d)}}}
 
 function popup(t,col,x,y,size){x=x===undefined?W/2:x;y=y===undefined?G.py-150:y;
  for(const f of G.fx)if(!f.e&&f.life>.8&&Math.abs(f.y-y)<26&&Math.abs(f.x-x)<160)y=f.y-28;
- G.fx.push({t,col:col||'#fff',x,y,life:1.4,size:size||22})}
+ G.fx.push({t,col:col||'#fff',x,y,life:1.3,size:size||20})}
 function bubble(t,d){G.bub={t,life:d||2.8}}
-function say(t,d){G.sub={t,life:d||2.6};G.yell=d||2.6}
-function banner(a,b,c){G.banner={a,b,c,life:3.2}}
-function particles(e,n){for(let i=0;i<n;i++)G.fx.push({e,x:G.px,y:G.py,vx:(Math.random()-.5)*320,vy:-120-Math.random()*220,life:1,size:20})}
-function chat(t,n){G.chat.push({n:n||pick(NICK,'nk',5),t:t||pick(CHAT,'ch'),c:rand(['#ff7ac6','#7ee8ff','#ffcc33','#7dff9a','#c9a0ff'])});if(G.chat.length>5)G.chat.shift()}
-function donate(n,a,m){G.alert={n,a,m,life:4.2};airhorn();chat('💸 '+a+' от '+n,'СИСТЕМА');addCringe(8);G.viewers+=670}
-function addCringe(v){if(G.peak>0)return;G.cringe=Math.min(100,G.cringe+v);
- if(G.cringe>=100){G.cringe=0;G.peak=6;banner('ПИК КРИНЖА','x2 БАБЛА 6 СЕКУНД','чат в шоке, мама в шоке');tune([300,250,200,400,800],'sawtooth',.06,.08);hap('ok');for(let i=0;i<5;i++)chat('КРИНЖ')}}
+function banner(a,b,c){G.banner={a,b,c,life:3}}
+function particles(e,n){for(let i=0;i<n;i++)G.fx.push({e,x:G.px,y:G.py,vx:(Math.random()-.5)*280,vy:-120-Math.random()*200,life:.9,size:18})}
 function start(){unlock();reset();st='play';wrap.classList.remove('dead');for(const id of['story','over','shop'])$(id).classList.remove('show');
- bubble('чат, заносим',2.5);say('ЧАТ, ПОЕХАЛИ НА ЛУНУ!!!',2.4);
- if(owned.tips>0){owned.tips--;save('owned',JSON.stringify(owned));setTimeout(()=>{if(st==='play')donate(userName,'67⭐','ДОНАТЫЧ, ЗАПРАВЬ ЛАМБУ!!!')},2500)}}
+ bubble('чат, заносим',2.5);
+ const today=new Date().toDateString();
+ if(dropDay!==today){dropDay=today;save('drop',today);G.shield=1;banner('ДЕЙЛИ АИРДРОП','МЬЮИНГ-ЩИТ x1','один удар сегодня бесплатно')}
+ if(owned.tips>0){owned.tips--;saveOwned();setTimeout(()=>{if(st==='play')banner('СПАСИБО, '+userName.toUpperCase(),'ЗА 67⭐ НА БЕНЗИН','Донатыч плачет от счастья')},3500)}}
 
 // ---------- Спавн ----------
 function spawnRow(){const lanes=[0,1,2].sort(()=>Math.random()-.5);let bads=0;
@@ -252,32 +249,33 @@ function spawnRow(){const lanes=[0,1,2].sort(()=>Math.random()-.5);let bads=0;
  const n=Math.random()<.35+Math.min(.3,G.t*.004)?2:1;
  for(let i=0;i<n;i++){const l=lanes[i];let good=Math.random()<.42;
   if(!good&&(l===G.safe||bads>=2))good=true;
-  let e;if(good){const r=Math.random();e=r<.66?'🪙':r<.8?'🚀':r<(G.stars?.92:.86)?'💎':'🗿'}else{e=rand(BAD);bads++}
+  let e;if(good){const r=Math.random();e=r<.64?'🪙':r<.76?'🚀':r<(G.stars?.86:.82)?'💎':r<.93?'🗿':'🧲'}else{e=rand(BAD);bads++}
   G.objs.push({e,l,x:LX(l),y:-40,good:good?1:0,vy:e==='🚓'?.72:1,w:Math.random()*6})}
  G.safe=bads>=2?lanes[2]:-1}
 
 // ---------- Логика ----------
-const mult=()=>(G.peak>0?2:1);
-function hit(o){G.stars++;G.inv=1.2;G.hitT=.6;G.shake=.4;G.last=o.e;beep(140,.28,'sawtooth',.12,40);hap('hit');
- popup(BADT[o.e],'#ff3b3b');say(rand(['АААА ЧАТ!!!','НЕЕЕТ, МОЯ ЛАМБА','ЭТО МОНТАЖ!!!','ЧАТ, ВЫ ЭТОГО НЕ ВИДЕЛИ']),1.6);chat(rand(['F','ахахах','КРИНЖ','ору','-aura']));addCringe(12);
+function hit(o){G.last=o.e;
+ if(G.shield>0){G.shield--;G.inv=1;popup('ЩИТ СЪЕЛ УДАР','#7ee8ff');beep(500,.15,'triangle',.08,200);hap('coin');return}
+ G.stars++;G.inv=1.2;G.hitT=.6;G.shake=.3;beep(140,.28,'sawtooth',.12,40);hap('hit');popup(BADT[o.e],'#ff3b3b');
  if(G.stars>=5)die()}
 function collect(o){const g=GOOD[o.e];
- if(o.e==='🪙'){G.money+=Math.round(10*mult()*(owned.gold?1.2:1));G.coins++;G.c67++;beep(990,.06,'square',.04,1480);if(G.coins%10===0)hap('coin');addCringe(.6);
-  if(G.c67>=67){G.c67=0;sixSeven()}}
- else{G.money+=g.m*mult();popup(g.t,'#ffe600');hap('ok');tune([660,880,1320],'triangle',.06);particles('💸',6);addCringe(6);
-  if(o.e==='💎'&&G.stars>0)G.stars--;
-  if(Math.random()<.6)popup(pick(PH,'ph'),'#fff',W/2,G.py-185,18);if(Math.random()<.5)say(pick(DON,'don'),2)}}
-function sixSeven(){G.six=6.7;G.inv=0;bubble('SIX SEVEEEEN!!!',3);say('SIX SEVEN!!! 🤲🤲',3);popup('SIX SEVEN!!!','#ffe600',W/2,G.py-120,30);hap('ok');particles('💸',14);
- for(let i=0;i<5;i++)chat('67 67 67 67');addCringe(30);tune([392,523,659,784,1047,784,1047],'square',.07)}
-function die(){st='dead';G.shake=.6;hap('dead');beep(300,.9,'sawtooth',.1,50);
+ if(o.e==='🪙'){G.money+=Math.round(10*(owned.gold?1.2:1));G.coins++;G.c67++;beep(990,.06,'square',.04,1480);if(G.coins%10===0)hap('coin');
+  if(G.c67>=67){G.c67=0;sixSeven()}return}
+ G.money+=g.m;popup(g.t,'#ffe600');hap('ok');tune([660,880,1320],'triangle',.06);
+ if(o.e==='💎'&&G.stars>0)G.stars--;
+ if(o.e==='🧲')G.mag=6;
+ if(Math.random()<.35)popup(pick(PH,'ph'),'#fff',W/2,G.py-185,17)}
+function sixSeven(){G.six=6.7;G.inv=0;bubble('SIX SEVEEEEN!!!',3);hap('ok');particles('💸',5);tune([392,523,659,784,1047,784,1047],'square',.07)}
+function die(){st='dead';G.shake=.5;hap('dead');beep(300,.9,'sawtooth',.1,50);
  const c=CAUSE[G.last]&&Math.random()<.7?rand(CAUSE[G.last]):pick(CAUSE_ANY,'ca',3);
  const rec=G.money>best;if(rec){best=G.money;save('best',best)}
- $('cause').textContent=c;$('stats').textContent='$'+G.money.toLocaleString('ru')+' · '+Math.floor(G.dist)+' м';
- $('best').textContent=rec?'🏆 НОВЫЙ РЕКОРД!':'Рекорд: $'+best.toLocaleString('ru');$('rank').textContent='Рейтинг: '+rankOf(G.money);
+ $('cause').textContent=c;$('shn').textContent=pick(SHN_DEAD,'sd',2);$('stats').textContent='$'+G.money.toLocaleString('ru')+' · '+Math.floor(G.dist)+' м';
+ $('best').textContent=rec?'🏆 НОВЫЙ РЕКОРД!':'Рекорд: $'+best.toLocaleString('ru');$('rank').textContent='Ранг: '+rankOf(G.money);
  $('revive').parentNode.style.display=G.revived?'none':'flex';
+ const oc=$('oCv').getContext('2d');oc.imageSmoothingEnabled=false;oc.clearRect(0,0,64,32);oc.drawImage(SP.don1,0,0,32,32);oc.drawImage(SP.shn1,32,0,32,32);
  setTimeout(()=>{wrap.classList.add('dead');const o=$('over');o.classList.add('show','wait');setTimeout(()=>o.classList.remove('wait'),700)},700)}
 function revive(){G.revived=true;G.stars=2;G.inv=2.5;G.objs=[];st='play';wrap.classList.remove('dead');for(const id of['over','shop'])$(id).classList.remove('show');
- bubble('я договорился с налоговой, брат',3);say('Я ВОСКРЕС, ЧАТ!!! ЭТО ЗНАК',2.5);tune([523,659,784,1047],'triangle',.07)}
+ bubble('я договорился с налоговой, брат',3);tune([523,659,784,1047],'triangle',.07)}
 
 function update(dt){G.t+=dt;
  for(const f of G.fx){f.life-=dt;if(f.e){f.x+=f.vx*dt;f.y+=f.vy*dt;f.vy+=600*dt}else f.y-=40*dt}
@@ -286,23 +284,20 @@ function update(dt){G.t+=dt;
  G.speed=Math.min(820,260+G.t*7);const dy=G.speed*dt;G.dist+=dy/30;G.off=(G.off+dy)%60;
  const s=G.dist>=1337?2:G.dist>=670?1:0;
  if(s>G.stage){G.stage=s;G.money+=670*s;banner('МИССИЯ ВЫПОЛНЕНА','УВАЖЕНИЕ +','Дальше: '+STAGES[s]);tune([523,659,784,1047],'triangle',.07);hap('ok');
-  bubble(s===1?'братан, мы на бирже!':'братан, мы в космосе. это иксы',3);say(RAP[s-1],4.5)}
- if(!G.moon&&G.dist>=6700){G.moon=true;G.money+=6700;banner('МИССИЯ ВЫПОЛНЕНА','УВАЖЕНИЕ +6700','Дальше — бесконечность');bubble('братан, я вышел на хаях',5);say(RAP[2],4.5);
+  bubble(s===1?'братан, мы на бирже. we\'re so back':'бро, мы в космосе. аура на максимум',3)}
+ if(!G.moon&&G.dist>=6700){G.moon=true;G.money+=6700;banner('МИССИЯ ВЫПОЛНЕНА','УВАЖЕНИЕ +6700','Дальше — бесконечность');bubble('братан, я вышел на хаях',5);
   tune([523,659,784,1047,1319,1568],'triangle',.08);hap('ok')}
  if(G.moon&&G.moonY<H+300)G.moonY+=dy*.12;
  G.px+=(LX(G.lane)-G.px)*Math.min(1,dt*16);
- G.inv=Math.max(0,G.inv-dt);G.hitT=Math.max(0,G.hitT-dt);G.yell=Math.max(0,G.yell-dt);G.peak=Math.max(0,G.peak-dt);
- if(G.six>0){G.six-=dt;if(G.six<=0){G.six=0;popup('аура закончилась','#fff')}}
- for(const k of['bub','banner','sub','alert'])if(G[k]&&(G[k].life-=dt)<=0)G[k]=null;
- if((G.shT-=dt)<=0){if(G.bub)G.shT=2;else{G.shT=10+Math.random()*5;bubble(pick(SHN,'shn'))}}
- if((G.saidT-=dt)<=0){G.saidT=7+Math.random()*5;if(!G.sub)say(pick(DON,'don'))}
- if((G.phT-=dt)<=0){G.phT=3+Math.random()*3;popup(pick(PH,'ph'),rand(['#fff','#ffe600','#00f0ff','#ff7ac6']),W/2+(Math.random()-.5)*60,H*.36+Math.random()*H*.2,17)}
- if((G.chatT-=dt)<=0){G.chatT=.6+Math.random()*1.1;chat();G.viewers+=Math.round((Math.random()-.3)*40)}
- if((G.donT-=dt)<=0){G.donT=13+Math.random()*9;if(!G.alert)donate(pick(NICK,'dn',4),rand(DAMT),pick(DMSG,'dm'))}
+ G.inv=Math.max(0,G.inv-dt);G.hitT=Math.max(0,G.hitT-dt);G.mag=Math.max(0,G.mag-dt);
+ if(G.six>0){G.six-=dt;if(G.six<=0)G.six=0}
+ for(const k of['bub','banner'])if(G[k]&&(G[k].life-=dt)<=0)G[k]=null;
+ if((G.shT-=dt)<=0){if(G.bub)G.shT=2;else{G.shT=14+Math.random()*6;bubble(pick(SHN,'shn'))}}
  G.decoAcc+=dy;while(G.decoAcc>=70){G.decoAcc-=70;addDeco(-40)}
  for(const d of G.deco)d.y+=dy;G.deco=G.deco.filter(d=>d.y<H+80);
  if((G.spawnT-=dt)<=0){spawnRow();G.spawnT=(250-Math.min(95,G.t*1.3))/G.speed}
  for(const o of G.objs){o.y+=dy*(o.vy||1);
+  if(G.mag>0&&o.e==='🪙'&&o.y>G.py-320&&o.y<G.py+40){o.x+=(G.px-o.x)*Math.min(1,dt*7)}
   if(!o.done&&Math.abs(o.x-G.px)<42&&Math.abs(o.y-G.py)<56){
    if(o.good){o.done=1;collect(o)}
    else if(G.six>0){o.done=1;G.money+=67;popup('СНЕСЁН +67$','#ffe600',o.x,o.y);beep(200,.1,'square',.06,600)}
@@ -313,7 +308,7 @@ function update(dt){G.t+=dt;
 const SKY=[['#ff6fb5','#b03ad8','#3a0a5e'],['#06140d','#0e2a1a','#1b0f2e'],['#000','#12002a','#2a0845']];
 function sky(s){return grads[s]||(grads[s]=(()=>{const g=lx.createLinearGradient(0,0,0,H);SKY[s].forEach((c,i)=>g.addColorStop(i/2,c));return g})())}
 function drawWorld(){const s=G.stage,g=lx;g.fillStyle=sky(s);g.fillRect(0,0,W,H);
- if(s===0){g.fillStyle='rgba(255,255,255,.12)';for(let y=(G.off*2)%40;y<H;y+=40)g.fillRect(0,Math.round(y/2)*2,W,2);for(let x=0;x<W;x+=30)g.fillRect(x,0,2,H)}
+ if(s===0){g.fillStyle='rgba(255,255,255,.1)';for(let y=(G.off*2)%40;y<H;y+=40)g.fillRect(0,Math.round(y/2)*2,W,2);for(let x=0;x<W;x+=30)g.fillRect(x,0,2,H)}
  if(s>=1){g.fillStyle='#fff';for(const p of STARS){const y=(p.y+G.off*p.z*(s===2?4:1)+G.t*p.z*(s===2?60:8))%900;if(y<H){g.globalAlpha=s===2?p.z:p.z*.25;g.fillRect(Math.round(p.x/2)*2,Math.round(y/2)*2,2,2)}}g.globalAlpha=1}
  for(const d of G.deco){
   if(d.sp)spr(SP[d.sp],d.x,d.y);
@@ -322,66 +317,37 @@ function drawWorld(){const s=G.stage,g=lx;g.fillStyle=sky(s);g.fillRect(0,0,W,H)
   else if(d.k==='pl'){g.fillStyle=d.c;g.beginPath();g.arc(d.x,d.y,d.r,0,7);g.fill();g.fillStyle='rgba(0,0,0,.3)';g.beginPath();g.arc(d.x+3,d.y+3,d.r-2,0,7);g.fill()}}
  const rc=['#1e0e2c','#0a1614','rgba(40,0,80,.5)'][s],ec=['#00f0ff','#22e06b','#b388ff'][s];
  g.fillStyle=rc;g.fillRect(60,0,240,H);
- g.fillStyle='rgba(255,255,255,.04)';for(let y=G.off%20-20;y<H;y+=20)g.fillRect(70+((y*7)%200+200)%200,Math.round(y/2)*2,2,2);
  for(let y=G.off%40-40;y<H;y+=20){const on=Math.round((y-G.off%40)/20)%2===0;g.fillStyle=s===0?(on?'#ff2d95':'#fff'):s===1?(on?'#22e06b':'#ff3b3b'):(on?'#b388ff':'#2a0845');g.fillRect(56,Math.round(y/2)*2,6,20);g.fillRect(298,Math.round(y/2)*2,6,20)}
  g.fillStyle=ec;g.fillRect(62,0,2,H);g.fillRect(296,0,2,H);
  g.fillStyle=s===1?'#ff3b3b':'rgba(255,255,255,.7)';for(let y=G.off-60;y<H;y+=60){g.fillRect(138,Math.round(y/2)*2,4,30);g.fillRect(218,Math.round(y/2)*2,4,30)}
- if(G.speed>600){g.fillStyle='rgba(255,255,255,.25)';for(let i=0;i<6;i++){const x=70+((i*53+G.t*900)%220),y=(i*131+G.t*1400)%H;g.fillRect(Math.round(x/2)*2,Math.round(y/2)*2,2,40)}}
  if(G.moon&&G.moonY<H+250){const x=W/2,y=G.moonY;g.fillStyle='#d9d9e6';g.beginPath();g.arc(x,y,120,0,7);g.fill();g.fillStyle='#b4b4c8';
   [[-50,-40,18],[40,-10,24],[-30,40,12],[60,-60,10]].forEach(([a,b,r])=>{g.beginPath();g.arc(x+a,y+b,r,0,7);g.fill()});g.fillStyle='#6b4423';g.fillRect(x-4,y+60,8,50)}
- for(const o of G.objs)if(!o.done){const c=o.e==='🚓'?SP[(G.t*6|0)%2?'cop0':'cop1']:SP[o.e];spr(c,o.x+(o.good?0:Math.round(Math.sin(G.t*3+o.w)*2)*2),o.y+(o.good?Math.round(Math.sin(G.t*5+o.y*.05))*2:0))}
+ for(const o of G.objs)if(!o.done){const c=o.e==='🚓'?SP[(G.t*6|0)%2?'cop0':'cop1']:SP[o.e];spr(c,o.x+(o.good?0:Math.round(Math.sin(G.t*3+o.w)*2)*2),o.y)}
  if(!(G.inv>0&&((G.t*12)|0)%2)){g.fillStyle='rgba(0,0,0,.35)';g.fillRect(G.px-20,G.py-34,44,84);
   if(G.stage===2||G.six>0){g.fillStyle=G.six>0?'#ffe600':'#ff8c00';const f=Math.round(Math.random()*3)*4;g.fillRect(G.px-14,G.py+42,8,10+f);g.fillRect(G.px+6,G.py+42,8,10+f)}
-  spr(owned.gold?SP.gold:SP.car,G.px,G.py)}}
+  if(G.shield>0){g.strokeStyle='rgba(126,232,255,.8)';g.lineWidth=4;g.strokeRect(G.px-28,G.py-46,56,92)}
+  spr(SP[owned.skin]||SP.car,G.px,G.py)}}
 
-// ---------- Рисование: интерфейс стрима ----------
-function drawCam(){const x=6,y=6,w=150,h=80;cx.save();
- cx.fillStyle='#1a0b2e';cx.fillRect(x,y,w,h);cx.fillStyle='#2a1145';cx.fillRect(x,y+h-24,w,24);
- for(let i=0;i<w;i+=6){cx.fillStyle=`hsl(${(i*4+G.t*120)%360},100%,60%)`;cx.fillRect(x+i,y+2,4,2)}
- cx.globalAlpha=.25;txt('$AURA67',x+w/2,y+20,16,'#ff2d95','center',0);cx.globalAlpha=1;
- cx.beginPath();cx.rect(x,y,w,h);cx.clip();
- const bob=Math.round(Math.sin(G.t*8)*(G.yell>0?2:.6)),yl=G.yell>0&&((G.t*8)|0)%2,sl=G.bub&&((G.t*7)|0)%2;
- cx.drawImage(yl?SP.don1:SP.don0,x+2+(G.hitT>0?Math.round(Math.random()*4-2):0),y+8+bob,68,68);
- cx.drawImage(sl?SP.shn1:SP.shn0,x+78,y+12-bob,64,64);cx.restore();
- cx.lineWidth=3;cx.strokeStyle=G.six>0||G.peak>0?`hsl(${G.t*600%360},100%,60%)`:G.hitT>0?'#ff2b2b':'#ff2d95';cx.strokeRect(x,y,w,h);
- cx.fillStyle='#e00';cx.fillRect(x+4,y+6,30,12);txt('LIVE',x+19,y+12,8,'#fff','center',0);
- txt('👁 '+G.viewers.toLocaleString('ru'),x+w-4,y+12,9,'#fff','right',3);
- txt('ДОНАТЫЧ',x+36,y+h+8,9,'#ff7ac6','center',3);txt('ШНУРОК',x+112,y+h+8,9,'#7dff9a','center',3);
- const by=y+h+16;cx.fillStyle=K;cx.fillRect(x,by,w,10);const p=G.peak>0?1:G.cringe/100;
- cx.fillStyle=G.peak>0?`hsl(${G.t*600%360},100%,55%)`:p>.7?'#ff3b3b':'#ffcc33';cx.fillRect(x+1,by+1,(w-2)*p,8);
- txt(G.peak>0?'ПИК КРИНЖА x2':'КРИНЖ '+Math.floor(G.cringe)+'%',x+w/2,by+5,8,'#fff','center',2);
- const cy=by+14;cx.fillStyle='rgba(0,0,0,.4)';cx.fillRect(x,cy,w,G.chat.length*12+4);cx.font='800 9px system-ui,-apple-system,Arial,sans-serif';cx.textAlign='left';cx.textBaseline='middle';
- G.chat.forEach((m,i)=>{const yy=cy+8+i*12;cx.fillStyle=m.c;const n=m.n+':';cx.fillText(n,x+4,yy,70);const nw=Math.min(70,cx.measureText(n).width);cx.fillStyle='#fff';cx.fillText(' '+m.t,x+4+nw,yy,w-10-nw)})}
+// ---------- Рисование: интерфейс ----------
 function drawBubble(){const b=G.bub;if(!b)return;cx.font='800 14px system-ui,-apple-system,Arial,sans-serif';const w=Math.min(W-20,cx.measureText(b.t).width+20);
  let x=Math.max(10,Math.min(W-10-w,G.px+10-w/2)),y=G.py-108;cx.fillStyle='#fff';cx.fillRect(x,y,w,30);cx.lineWidth=2;cx.strokeStyle=K;cx.strokeRect(x,y,w,30);
  cx.beginPath();cx.moveTo(G.px+4,y+30);cx.lineTo(G.px+12,y+44);cx.lineTo(G.px+16,y+30);cx.closePath();cx.fill();
  cx.fillStyle=K;cx.textAlign='center';cx.textBaseline='middle';cx.fillText(b.t,x+w/2,y+15,w-12);txt('ШНУРОК',x+10,y-7,9,'#7dff9a','left',3)}
-function drawRadar(){const x=40,y=H-205,r=32;cx.save();cx.globalAlpha=.88;cx.beginPath();cx.arc(x,y,r,0,7);cx.fillStyle='#0d3b22';cx.fill();cx.lineWidth=3;cx.strokeStyle='#fff';cx.stroke();cx.clip();
- cx.strokeStyle='rgba(120,255,160,.35)';cx.lineWidth=1;cx.beginPath();cx.moveTo(x-r,y);cx.lineTo(x+r,y);cx.moveTo(x,y-r);cx.lineTo(x,y+r);cx.stroke();
- const a=G.t*3;cx.fillStyle='rgba(120,255,160,.25)';cx.beginPath();cx.moveTo(x,y);cx.arc(x,y,r,a,a+.7);cx.fill();
- for(const o of G.objs){const dx=(o.x-G.px)/6,dy=(o.y-G.py)/7;if(dx*dx+dy*dy<r*r){cx.fillStyle=o.good?'#ffe600':'#ff2b2b';cx.fillRect(x+dx-2,y+dy-2,4,4)}}
- cx.fillStyle='#fff';cx.beginPath();cx.moveTo(x,y-6);cx.lineTo(x+4,y+4);cx.lineTo(x-4,y+4);cx.fill();cx.restore()}
 function drawHud(){txt('$'+String(G.money).padStart(8,'0'),W-8,24,24,'#3ee06b','right',5,190);
  for(let i=0;i<5;i++){const on=i<G.stars;txt('★',W-18-i*25,52,24,on?(G.hitT>0&&(G.t*16|0)%2?'#ff3b3b':'#fff'):'rgba(255,255,255,.18)','center',on?4:2)}
- txt(STAGES[G.stage],W-8,76,12,'#ff7ac6','right',3);txt(Math.floor(G.dist)+' м',W-8,93,15,'#fff','right',3);txt('🪙 '+G.c67+'/67',W-8,110,12,'#ffe600','right',3);
- drawCam();drawRadar();
- if(G.sub)txt(G.sub.t,W/2,H-118,13,'#ffe600','center',4,W-20);
- if(G.alert){const a=G.alert,y=210,al=Math.max(0,Math.min(1,a.life*2,(4.2-a.life)*4));cx.globalAlpha=al;
-  cx.fillStyle='#1b0a2e';cx.fillRect(24,y-28,W-48,60);cx.lineWidth=3;cx.strokeStyle=`hsl(${G.t*400%360},100%,60%)`;cx.strokeRect(24,y-28,W-48,60);
-  de('💸',48,y-4,26);txt(a.n+' задонатил '+a.a,W/2+14,y-12,14,'#ffcc33','center',3,W-110);txt('«'+a.m+'»',W/2+14,y+12,11,'#fff','center',3,W-110);cx.globalAlpha=1}
+ txt(STAGES[G.stage],8,18,12,'#ff7ac6','left',3);txt(Math.floor(G.dist)+' м',8,36,15,'#fff','left',3);txt('🪙 '+G.c67+'/67',8,54,12,'#ffe600','left',3);
+ let y=74;if(G.shield>0){txt('🛡 ЩИТ x'+G.shield,8,y,11,'#7ee8ff','left',3);y+=16}if(G.mag>0)txt('🧲 '+G.mag.toFixed(1),8,y,11,'#ff7ac6','left',3);
  if(G.banner){const b=G.banner,y=H*.42;cx.fillStyle='rgba(0,0,0,.6)';cx.fillRect(0,y-46,W,b.c?108:84);
   txt(b.a,W/2,y-18,26,'#ffd400','center',5);txt(b.b,W/2,y+16,22,'#ffd400','center',5);if(b.c)txt(b.c,W/2,y+46,14,'#fff','center',3)}}
-function draw(){const sh=G.six>0?3:G.shake>0?G.shake*18:0,sx=sh?(Math.random()-.5)*sh:0,sy=sh?(Math.random()-.5)*sh:0;
+function draw(){const sh=G.six>0?2:G.shake>0?G.shake*16:0,sx=sh?(Math.random()-.5)*sh:0,sy=sh?(Math.random()-.5)*sh:0;
  drawWorld();cx.save();cx.translate(sx,sy);cx.drawImage(LC,0,0,LW,LC.height,0,0,W,LC.height*2);
  for(const d of G.deco)if(d.k==='ns'){cx.save();cx.translate(d.x,d.y);cx.rotate(-Math.PI/2);cx.fillStyle='rgba(0,0,0,.6)';cx.fillRect(-34,-12,68,24);cx.lineWidth=2;cx.strokeStyle=d.c;cx.strokeRect(-34,-12,68,24);
-  txt(d.t,0,1,12,(G.t*4|0)%7?d.c:'#fff','center',0,60);cx.restore()}
+  txt(d.t,0,1,12,d.c,'center',0,60);cx.restore()}
  if(G.moon&&G.moonY<H+250){const x=W/2,y=G.moonY;cx.fillStyle='#fff8dc';cx.fillRect(x-95,y+10,190,56);cx.lineWidth=3;cx.strokeStyle='#6b4423';cx.strokeRect(x-95,y+10,190,56);
   txt('ЛУНА ПРОДАНА.',x,y+24,15,'#c00','center',0,180);txt('Рагпулл.',x,y+39,12,'#222','center',0,180);txt('Спасибо за ликвидность',x,y+54,12,'#222','center',0,180)}
  drawBubble();
  for(const f of G.fx){cx.globalAlpha=Math.min(1,f.life*1.5);if(f.e)de(f.e,f.x,f.y,f.size);else txt(f.t,f.x,f.y,f.size,f.col,'center',4)}cx.globalAlpha=1;
- if(G.six>0){cx.fillStyle=`hsla(${G.t*720%360},100%,55%,.16)`;cx.fillRect(-10,-10,W+20,H+20);const z=70+Math.sin(G.t*20)*12;
-  de('6️⃣',W/2-z*.55,H*.36,z);de('7️⃣',W/2+z*.55,H*.36,z);txt('SIX SEVEN · '+G.six.toFixed(1),W/2,H*.36+z*.8,18,'#ffe600')}
- if(G.peak>0){cx.fillStyle=`hsla(${G.t*300%360},100%,50%,.08)`;cx.fillRect(-10,-10,W+20,H+20)}
+ if(G.six>0){const z=64+Math.sin(G.t*10)*6;de('6️⃣',W/2-z*.55,H*.32,z);de('7️⃣',W/2+z*.55,H*.32,z);txt('SIX SEVEN · '+G.six.toFixed(1),W/2,H*.32+z*.8,16,'#ffe600')}
  cx.restore();drawHud()}
 
 let lt=performance.now();
@@ -406,7 +372,7 @@ document.addEventListener('dblclick',e=>e.preventDefault());
 function showSlide(){const sc=$('sCv').getContext('2d');sc.imageSmoothingEnabled=false;sc.clearRect(0,0,150,75);
  if(slide===0){sc.drawImage(SP.don1,8,4,68,68);sc.drawImage(SP.shn0,78,8,64,64)}
  else if(slide===1){['cop0','🐊','👵','🐻','🐒'].forEach((k,i)=>{const c=SP[k];sc.drawImage(c,4+i*29+Math.round((26-c.width)/2),24+Math.round((28-c.height)/2))});sc.fillStyle='#e11';sc.fillRect(10,64,130,3)}
- else{sc.fillStyle='#d9d9e6';sc.beginPath();sc.arc(118,22,18,0,7);sc.fill();sc.fillStyle='#b4b4c8';sc.fillRect(108,16,6,6);sc.fillRect(122,26,5,5);sc.drawImage(owned.gold?SP.gold:SP.car,40,18,24,42)}
+ else{sc.fillStyle='#d9d9e6';sc.beginPath();sc.arc(118,22,18,0,7);sc.fill();sc.fillStyle='#b4b4c8';sc.fillRect(108,16,6,6);sc.fillRect(122,26,5,5);sc.drawImage(SP[owned.skin]||SP.car,40,18,24,42)}
  $('sTitle').firstChild.textContent=STORY[slide][0];$('sTxt').innerHTML=STORY[slide][1];
  $('dots').innerHTML=STORY.map((_,i)=>'<span class="'+(i===slide?'on':'')+'"></span>').join('')}
 function nextSlide(){unlock();beep(700,.05,'triangle',.04);if(++slide>=STORY.length)start();else showSlide()}
@@ -414,20 +380,27 @@ $('story').addEventListener('pointerdown',e=>{e.preventDefault();nextSlide()});
 $('skip').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();start()});
 $('again').addEventListener('click',start);
 $('share').addEventListener('click',()=>{const url=SHARE_URL||location.href.split('#')[0],
- t='Я поднял $'+G.money.toLocaleString('ru')+' и проехал '+Math.floor(G.dist)+' м в Бабло-Сити 🏎️🌕 Рейтинг: «'+rankOf(G.money)+'». Побьёшь?',
+ t='Я поднял $'+G.money.toLocaleString('ru')+' и проехал '+Math.floor(G.dist)+' м в Бабло-Сити 🏎️🌕 Ранг: «'+rankOf(G.money)+'». Могнёшь?',
  link='https://t.me/share/url?url='+encodeURIComponent(url)+'&text='+encodeURIComponent(t);
  try{if(inTG){tg.openTelegramLink(link);return}}catch(e){}
  if(navigator.share)navigator.share({text:t,url}).catch(()=>{});else window.open(link,'_blank')});
 
-// ---------- Магазин (Telegram Stars через n8n) ----------
-const SHOP=[{id:'revive',e:'❤️‍🔥',t:'Второй шанс',d:'Шнурок договаривается с налоговой. Продолжаешь заезд с 2★. Раз за заезд.',p:5},
- {id:'gold',e:'🏆',t:'Золотая ламба',d:'Навсегда. +20% бабла за каждую монету. Блестит так, что стыдно.',p:50},
- {id:'tip',e:'⛽',t:'Донат на бензин',d:'В следующем заезде Донатыч зачитает твоё имя на стриме под сирену.',p:67}];
-function renderShop(){$('items').innerHTML=SHOP.map(s=>{const off=s.id==='revive'&&(st!=='dead'||G.revived)||s.id==='gold'&&owned.gold;
- return '<div class="it'+(off?' off':'')+'" data-id="'+s.id+'"><div class="e">'+s.e+'</div><div><div class="t">'+s.t+'</div><div class="d">'+s.d+'</div></div><div class="p">'+(s.id==='gold'&&owned.gold?'есть':s.p+' ⭐')+'</div></div>'}).join('')}
+// ---------- Гараж: бесплатные ламбы за рекорд и платное за Telegram Stars (касса в n8n) ----------
+const SKINS=[{id:'car',e:'🩷',t:'Розовая ламба',d:'Классика Бабло-Сити.',need:0},
+ {id:'cyan',e:'🧊',t:'Мьюинг-ламба',d:'Бирюзовая. Бесплатно за рекорд 5 000$.',need:5000},
+ {id:'chrome',e:'🕶️',t:'Чад-ламба',d:'Чёрный хром. Бесплатно за рекорд 20 000$.',need:20000},
+ {id:'gold',e:'🏆',t:'Золотая ламба',d:'Навсегда. +20% бабла за каждую монету.',p:50}];
+const PAID=[{id:'revive',e:'❤️‍🔥',t:'Второй шанс',d:'Шнурок договаривается с налоговой. Продолжаешь заезд с 2★. Раз за заезд.',p:5},
+ {id:'tip',e:'⛽',t:'Донат на бензин',d:'В следующем заезде Донатыч скажет тебе спасибо по имени.',p:67}];
+const row=(s,btn,cls,off)=>'<div class="it'+(off?' off':'')+'" data-id="'+s.id+'"><div class="e">'+s.e+'</div><div><div class="t">'+s.t+'</div><div class="d">'+s.d+'</div></div><div class="p '+(cls||'')+'">'+btn+'</div></div>';
+function renderShop(){let h='<h3>Ламбы</h3>';
+ for(const s of SKINS){const has=s.p?owned.gold:best>=s.need,on=owned.skin===s.id;
+  h+=on?row(s,'надета','on'):has?row(s,'надеть','f'):s.p?row(s,s.p+' ⭐'):row(s,'рекорд '+s.need.toLocaleString('ru')+'$','f',true)}
+ h+='<h3>За Stars</h3>';for(const s of PAID)h+=row(s,s.p+' ⭐','',s.id==='revive'&&(st!=='dead'||G.revived));
+ $('items').innerHTML=h}
 function openShop(){renderShop();$('shop').classList.add('show')}
-function grant(id){if(id==='revive')revive();else if(id==='gold'){owned.gold=1;save('owned',JSON.stringify(owned));toast('Золотая ламба твоя. Навсегда. Кринж одобрен.');renderShop()}
- else{owned.tips++;save('owned',JSON.stringify(owned));toast('Донат принят. Донатыч зачитает тебя в следующем заезде.')}
+function grant(id){if(id==='revive')revive();else if(id==='gold'){owned.gold=1;owned.skin='gold';saveOwned();toast('Золотая ламба твоя. Навсегда.');renderShop()}
+ else{owned.tips++;saveOwned();toast('Донат принят. Донатыч скажет спасибо в следующем заезде.')}
  hap('ok');tune([523,659,784,1047,1319],'triangle',.07)}
 function buy(id){if(!inTG||!tg.openInvoice){toast('Покупки работают только внутри Telegram');return}
  if(!N8N_URL){toast('Касса Шнурка ещё не открыта. Скоро!');return}
@@ -435,12 +408,14 @@ function buy(id){if(!inTG||!tg.openInvoice){toast('Покупки работаю
  fetch(N8N_URL,{method:'POST',body:new URLSearchParams({item:id,initData:tg.initData})})
   .then(r=>r.json()).then(j=>{if(!j||!j.link)throw 0;$('toast').style.display='none';tg.openInvoice(j.link,s=>{if(s==='paid')grant(id);else if(s==='failed')toast('Оплата не прошла')})})
   .catch(()=>toast('Касса недоступна, попробуй позже'))}
-$('items').addEventListener('click',e=>{const it=e.target.closest('.it');if(!it||it.classList.contains('off'))return;buy(it.dataset.id)});
+$('items').addEventListener('click',e=>{const it=e.target.closest('.it');if(!it||it.classList.contains('off'))return;const id=it.dataset.id,sk=SKINS.find(s=>s.id===id);
+ if(sk&&(sk.p?owned.gold:best>=sk.need)){owned.skin=id;saveOwned();renderShop();beep(880,.06,'triangle',.05);return}
+ buy(id)});
 $('shopB').addEventListener('click',openShop);$('shopX').addEventListener('click',()=>$('shop').classList.remove('show'));
 $('revive').addEventListener('click',()=>buy('revive'));
 
 addEventListener('resize',fit);fit();showSlide();requestAnimationFrame(loop);
-window.game={get G(){return G},get st(){return st},start,grant,openShop,spawn(e,l,y){G.objs.push({e,l,x:LX(l),y:y===undefined?G.py:y,good:GOOD[e]?1:0,vy:0,w:0})}};
+window.game={get G(){return G},get st(){return st},get owned(){return owned},start,grant,openShop,spawn(e,l,y){G.objs.push({e,l,x:LX(l),y:y===undefined?G.py:y,good:GOOD[e]?1:0,vy:0,w:0})}};
 </script>
 </body>
 </html>
