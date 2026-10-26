@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Бабло-Сити: Заезд на Луну</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{--bg:#12061f;--btn:#ff2d95;--btnt:#fff}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:#fff;font-family:-apple-system,system-ui,"Segoe UI",Roboto,Arial,sans-serif;overscroll-behavior:none;position:fixed;width:100%}
+#wrap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);overflow:hidden;background:#000}
+canvas{display:block;width:100%;height:100%;transition:filter .6s}
+#wrap.dead canvas{filter:grayscale(1) brightness(.55)}
+button{font-family:inherit;cursor:pointer}
+.ctl{position:absolute;bottom:calc(10px + env(safe-area-inset-bottom));width:44%;height:74px;border:3px solid #fff;border-radius:20px;background:rgba(255,45,149,.3);color:#fff;font-size:34px;font-weight:900;text-shadow:0 2px 0 #000}
+#L{left:4%}#R{right:4%}
+.ctl:active,.ctl.on{background:rgba(255,45,149,.85)}
+#mute{position:absolute;top:8px;left:8px;width:38px;height:38px;border-radius:50%;border:2px solid #fff;background:rgba(0,0,0,.45);font-size:18px;color:#fff;z-index:2}
+.ov{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:22px;gap:12px;z-index:5}
+.ov.show{display:flex}
+#story{background:linear-gradient(#ff5fa2,#8a2be2 55%,#1a0633)}
+#sTitle{font:900 30px "Arial Black",Impact,sans-serif;text-shadow:3px 3px 0 #000;line-height:1.05}
+#sTitle small{display:block;font-size:14px;color:#ffe600;letter-spacing:3px;margin-top:4px}
+#sEmo{font-size:64px;line-height:1.1;min-height:80px}
+#sTxt{font-size:18px;font-weight:700;line-height:1.35;max-width:330px;text-shadow:0 2px 0 rgba(0,0,0,.5)}
+#sTxt i{color:#ffe600;font-style:normal}
+#dots span{display:inline-block;width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.35);margin:0 4px}
+#dots span.on{background:#fff}
+.hint{font-size:13px;opacity:.75}
+#skip{position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px;background:rgba(0,0,0,.35);border:2px solid #fff;color:#fff;border-radius:14px;padding:7px 12px;font-weight:800;font-size:14px}
+#over{background:rgba(45,45,45,.72)}
+#wasted{font:900 58px Impact,"Arial Black",sans-serif;color:#d0102b;letter-spacing:2px;text-shadow:3px 3px 0 #000,-1px -1px 0 #000;transform:scaleY(1.15)}
+#cause{font-size:18px;font-weight:800;max-width:320px;line-height:1.3}
+#stats{font:900 22px "Arial Black",sans-serif;color:#39d353;text-shadow:2px 2px 0 #000}
+#best{font-size:15px;font-weight:700;opacity:.9}
+#rank{font-size:16px;font-weight:800;color:#ffe600;border:2px solid #ffe600;border-radius:12px;padding:6px 12px}
+.row{display:flex;gap:10px;margin-top:6px}
+.b{background:var(--btn);color:var(--btnt);border:none;border-radius:16px;padding:14px 20px;font-size:18px;font-weight:900;box-shadow:0 4px 0 #000}
+.b2{background:#fff;color:#000}
+#over.wait .row{opacity:.3;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="wrap">
+<canvas id="c"></canvas>
+<button id="mute" aria-label="звук">🔊</button>
+<button class="ctl" id="L" aria-label="влево">◀</button>
+<button class="ctl" id="R" aria-label="вправо">▶</button>
+<div id="story" class="ov show">
+ <button id="skip">Пропустить ⏭</button>
+ <div id="sTitle">БАБЛО-СИТИ<small>ШТАТ ЛИМОНИДА</small></div>
+ <div id="sEmo"></div><div id="sTxt"></div><div id="dots"></div>
+ <div class="hint">тапни, чтобы листать</div>
+</div>
+<div id="over" class="ov">
+ <div id="wasted">ПОТРАЧЕНО</div>
+ <div id="cause"></div><div id="stats"></div><div id="best"></div><div id="rank"></div>
+ <div class="row"><button id="again" class="b">Ещё раз</button><button id="share" class="b b2">Поделиться</button></div>
+</div>
+</div>
+<script>
+'use strict';
+// Ссылка, которую шлёт «Поделиться». Пусто — берётся адрес страницы. Можно вписать https://t.me/ИмяБота/game
+const SHARE_URL='';
+const tg=window.Telegram&&Telegram.WebApp&&Telegram.WebApp.initData!==undefined?Telegram.WebApp:null;
+const $=id=>document.getElementById(id);
+const cv=$('c'),cx=cv.getContext('2d'),wrap=$('wrap');
+const W=360;let H=680,S=1,DPR=1,EC={};
+const rand=a=>a[Math.random()*a.length|0];
+const recent={};
+function pick(list,key,n){const r=recent[key]||(recent[key]=[]);let v,i=0;do v=rand(list);while(r.includes(v)&&++i<50);r.push(v);if(r.length>(n||Math.min(10,list.length-1)))r.shift();return v}
+
+// ---------- Telegram ----------
+try{if(tg){tg.ready();tg.expand();tg.disableVerticalSwipes&&tg.disableVerticalSwipes();
+ if(tg.isVersionAtLeast('6.1')){tg.setHeaderColor('#12061f');tg.setBackgroundColor('#12061f')}
+ const p=tg.themeParams||{};const r=document.documentElement.style;
+ if(p.button_color)r.setProperty('--btn',p.button_color);if(p.button_text_color)r.setProperty('--btnt',p.button_text_color);
+ tg.onEvent&&tg.onEvent('viewportChanged',fit)}}catch(e){}
+function hap(k){try{const h=tg&&tg.HapticFeedback;if(!h)return;
+ if(k==='hit')h.impactOccurred('heavy');else if(k==='coin')h.impactOccurred('light');else if(k==='dead')h.notificationOccurred('error');else h.notificationOccurred('success')}catch(e){}}
+const cloudOk=()=>{try{return tg&&tg.CloudStorage&&tg.isVersionAtLeast('6.9')}catch(e){return false}};
+let best=0;
+try{best=+localStorage.getItem('best67')||0}catch(e){}
+try{if(cloudOk())tg.CloudStorage.getItem('best',(er,v)=>{if(!er&&+v>best)best=+v})}catch(e){}
+function saveBest(){try{localStorage.setItem('best67',best)}catch(e){}try{if(cloudOk())tg.CloudStorage.setItem('best',String(best))}catch(e){}}
+
+// ---------- Звук ----------
+let AC=null,muted=false;
+try{muted=localStorage.getItem('mute67')==='1'}catch(e){}
+$('mute').textContent=muted?'🔇':'🔊';
+function unlock(){try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume()}catch(e){}}
+function beep(f,d,t,v,f2,delay){if(muted||!AC)return;try{const n=AC.currentTime+(delay||0),o=AC.createOscillator(),g=AC.createGain();
+ o.type=t||'square';o.frequency.setValueAtTime(f,n);if(f2)o.frequency.exponentialRampToValueAtTime(f2,n+d);
+ g.gain.setValueAtTime(v||.05,n);g.gain.exponentialRampToValueAtTime(.0001,n+d);o.connect(g);g.connect(AC.destination);o.start(n);o.stop(n+d+.02)}catch(e){}}
+const tune=(a,t,v)=>a.forEach((f,i)=>beep(f,.12,t||'square',v||.05,0,i*.1));
+
+// ---------- Экран ----------
+function fit(){const vw=innerWidth,vh=innerHeight;H=Math.round(Math.min(820,Math.max(560,W*vh/vw)));S=Math.min(vw/W,vh/H);
+ wrap.style.width=W*S+'px';wrap.style.height=H*S+'px';DPR=Math.min(window.devicePixelRatio||1,2);
+ cv.width=Math.round(W*S*DPR);cv.height=Math.round(H*S*DPR);cx.setTransform(S*DPR,0,0,S*DPR,0,0);EC={};grads={};if(G.py)G.py=H-175}
+function emo(e,s){const k=e+s;let c=EC[k];if(!c){const r=S*DPR,z=s*1.4;c=document.createElement('canvas');c.width=c.height=Math.ceil(z*r);
+ const g=c.getContext('2d');g.scale(r,r);g.font=s+'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(e,z/2,z/2+s*.06);EC[k]=c}return c}
+function de(e,x,y,s){const z=s*1.4;cx.drawImage(emo(e,s),x-z/2,y-z/2,z,z)}
+function rr(x,y,w,h,r){cx.beginPath();cx.moveTo(x+r,y);cx.arcTo(x+w,y,x+w,y+h,r);cx.arcTo(x+w,y+h,x,y+h,r);cx.arcTo(x,y+h,x,y,r);cx.arcTo(x,y,x+w,y,r);cx.closePath()}
+function txt(s,x,y,size,col,al,sw,maxW){let f=size;cx.font='900 '+f+'px "Arial Black",Impact,system-ui,sans-serif';const w=cx.measureText(s).width,m=maxW||W-16;
+ if(w>m){f=f*m/w;cx.font='900 '+f+'px "Arial Black",Impact,system-ui,sans-serif'}
+ cx.textAlign=al||'center';cx.textBaseline='middle';cx.lineJoin='round';const lw=sw===undefined?4:sw;if(lw){cx.lineWidth=lw;cx.strokeStyle='#000';cx.strokeText(s,x,y)}cx.fillStyle=col;cx.fillText(s,x,y)}
+
+// ---------- Тексты ----------
+const PH=['HODL!','ЛИКВИДАЦИЯ x100','это не скам, это стратегия','купил дно, дно купило меня','сигма-заезд','аура фарм','SIX SEVEN!!!','WAGMI','NGMI','мама, я в крипте','биток по 67','рагпулл — это просто переоценка','чат, донатьте на бензин','налоговая в чате','TO THE MOON!!!','ламба в кредит, мечта в нал','шорт на бабушку','бро, это фундаментал','графики рисую сам','аллигатор тоже холдер','зашёл на всё, вышел без всего','скам? нет, сюрприз','чат, кто продал?! БАН','плечо x100, мозг x0','стоп-лосс для слабых','мемкоин — это искусство','я не инвестор, я заложник','мой портфель — это мем','фиат для бумеров','покупай слухи, продавай почки','кит в болоте','DYOR = донать и орёт','это не падение, это скидка','пенсия бабушки в работе','сигма не продаёт','токеномика: я богатею','WEN LAMBO? NOW LAMBO','чат, жмём ракету','минус вайб, плюс аура','бро, я в моменте','свечи горят, ламба тоже','скриньте, пока не удалил','мы так рано, что уже поздно','ауры больше, чем мозгов','x67 или бомж','пук в сторону налоговой','бабуля, это иксы!','заносим, пацаны','депозит улетел, я за ним','отвечаю, это дно (нет)','ГЕНИЙ ФИНАНСОВ','донат 67 рублей — спасибо, брат'];
+const SHN=['братан, это иксы','я в доле','чат, заносим','щас отскочит, отвечаю','брат, не продавай. я продаю','это всё по плану','я в телеге сигнал видел','давай ещё по плечу','ну я же говорил... наверное','газуй, налоговая сзади!','у меня бабуля тоже в коине','это не я рагпульнул, это рынок','братан, это просто коррекция','чат, лайк — это любовь','я чувствую памп кожей'];
+const GOOD={'🪙':{m:10},'🚀':{m:300,t:'ПАМП +300$'},'💎':{m:100,t:'АЛМАЗНЫЕ РУКИ −★'},'🗿':{m:1000,t:'+1000 АУРЫ'}};
+const BAD=['🚓','🐊','🐻','📉','👵','🧾','🐒'];
+const BADT={'🚓':'НАЛОГОВАЯ!','🐊':'АЛЛИГАТОР-ИНВЕСТОР','🐻':'МЕДВЕЖИЙ РЫНОК','📉':'КУПИЛ НА ХАЯХ','👵':'БАБУШКА С ПЛЕЧОМ','🧾':'МАРЖИН-КОЛЛ','🐒':'NFT-ОБЕЗЬЯНА ЗА 0$'};
+const CAUSE={'🚓':['Налоговая нашла кошелёк в стриме','Налоговая задонатила тебе повестку'],'🐊':['Аллигатор купил твои токены и съел тебя','Аллигатор-инвестор зашёл в раунд. Тобой'],'🐻':['Медведь лёг на график. И на тебя','Медвежий рынок обнял слишком крепко'],'📉':['Купил дно, дно купило тебя','Зашёл на хаях всей ламбой'],'👵':['Ликвидирован бабушкой с плечом x100','Бабушка вернула пенсию. Твоим лицом'],'🧾':['Маржин-колл пришёл раньше, чем мама','Биржа закрыла позицию. И ламбу'],'🐒':['Купил NFT-обезьяну. Обезьяна купила тебя','Обезьяна за 0 $ оказалась дороже жизни']};
+const CAUSE_ANY=['Шнурок вышел на хаях. Без тебя','Чат задонатил на похороны 67 рублей','Ламба оказалась в рассрочку на 67 лет','Аура упала ниже нуля','Рагпулл — это просто переоценка тебя'];
+const RANKS=[[0,'Нищий холдер'],[300,'Бумажные руки'],[1000,'Хомяк с района'],[2500,'Донатный дух'],[5000,'Крипто-бро Лимониды'],[10000,'Кит из болота'],[20000,'Король Бабло-Сити'],[40000,'Сигма Луны 67']];
+const rankOf=m=>{let r=RANKS[0][1];for(const[a,b]of RANKS)if(m>=a)r=b;return r};
+const STAGES=['БАБЛО-СИТИ','КРИПТО-БИРЖА','КОСМОС'];
+const STORY=[['📱😎💸','Донатыч на стриме задонатил <i>весь бюджет Бабло-Сити</i> в мемкоин <i>$AURA67</i>.<br>Совет дал Шнурок: «братан, это иксы».'],
+ ['📉🚓🐊👵','Коин рагпульнулся за <i>6,7 секунды</i>.<br>За ними гонятся налоговая, обманутые холдеры, аллигатор-инвестор и бабушка, которая вложила пенсию.'],
+ ['🏎️💨🌕','Единственный выход — <i>«to the moon»</i>. Буквально. Розовая ламба едет на Луну.<br><br>◀ ▶ — полосы. Лови 🪙🚀💎🗿, уворачивайся от 🚓🐊🐻📉👵🧾🐒. 5★ — ПОТРАЧЕНО.']];
+
+// ---------- Состояние ----------
+let st='story',G={},grads={},slide=0;
+const LX=l=>W/2+(l-1)*80;
+const SPACE_STARS=Array.from({length:70},()=>({x:Math.random()*W,y:Math.random()*900,z:.2+Math.random()*.8}));
+function reset(){G={lane:1,px:LX(1),py:H-175,speed:260,dist:0,money:0,stars:0,coins:0,c67:0,objs:[],fx:[],deco:[],six:0,inv:0,hitT:0,shake:0,
+ spawnT:1,shT:4,phT:3,bub:null,banner:null,stage:0,moon:false,moonY:-40,t:0,off:0,decoAcc:0,last:'',safe:-1};
+ for(let y=-40;y<H;y+=70)addDeco(y)}
+reset();
+
+function addDeco(y){for(const side of[0,1]){const x=side?W-30+(Math.random()*10-5):30+(Math.random()*10-5),r=Math.random(),s=G.stage;let d;
+ if(s===0)d=r<.4?{e:'🌴',s:30}:r<.62?{k:'sw'}:r<.9?{k:'ns',t:rand(['БАБЛО','МОТЕЛЬ','24/7','ЛИМОНИДА','КРИПТО','ЛОМБАРД','ШАУРМА','DONATE','x67']),c:rand(['#ff2d95','#00f0ff','#ffe600','#39ff14'])}:{e:rand(['🏝️','🌺','🦩']),s:24};
+ else if(s===1)d=r<.8?{k:'cd',up:Math.random()<.5,h:20+Math.random()*55}:{k:'ns',t:rand(['BTC','PUMP','DUMP','$AURA67','SELL','БАЙ']),c:rand(['#39ff14','#ff3b3b'])};
+ else d=r<.18?{e:rand(['🪐','🛰️','☄️','👽','🌍','🛸']),s:26}:null;
+ if(d){d.x=x;d.y=y;G.deco.push(d)}}}
+
+function popup(t,col,x,y,size){x=x===undefined?W/2:x;y=y===undefined?G.py-150:y;
+ for(const f of G.fx)if(!f.e&&f.life>.8&&Math.abs(f.y-y)<26&&Math.abs(f.x-x)<160)y=f.y-28;
+ G.fx.push({t,col:col||'#fff',x,y,life:1.4,size:size||22})}
+function bubble(t,d){G.bub={t,life:d||2.8}}
+function banner(a,b,c){G.banner={a,b,c,life:3.2}}
+function particles(e,n){for(let i=0;i<n;i++)G.fx.push({e,x:G.px,y:G.py,vx:(Math.random()-.5)*320,vy:-120-Math.random()*220,life:1,size:20})}
+
+function start(){unlock();reset();st='play';wrap.classList.remove('dead');$('story').classList.remove('show');$('over').classList.remove('show');bubble('чат, заносим',2.5)}
+
+// ---------- Спавн ----------
+function spawnRow(){const lanes=[0,1,2].sort(()=>Math.random()-.5);let bads=0;
+ if(Math.random()<.22){const l=lanes[0];for(let i=0;i<4;i++)G.objs.push({e:'🪙',l,x:LX(l),y:-40-i*48,good:1});G.safe=-1;return}
+ const n=Math.random()<.35+Math.min(.3,G.t*.004)?2:1;
+ for(let i=0;i<n;i++){const l=lanes[i];let good=Math.random()<.42;
+  if(!good&&(l===G.safe||bads>=2))good=true;
+  let e;if(good){const r=Math.random();e=r<.66?'🪙':r<.8?'🚀':r<(G.stars?.92:.86)?'💎':'🗿'}else{e=rand(BAD);bads++}
+  G.objs.push({e,l,x:LX(l),y:-40,good:good?1:0,vy:e==='🚓'?.72:1,w:Math.random()*6})}
+ G.safe=bads>=2?lanes[2]:-1}
+
+// ---------- Логика ----------
+function hit(o){G.stars++;G.inv=1.2;G.hitT=.6;G.shake=.4;G.last=o.e;beep(140,.28,'sawtooth',.12,40);hap('hit');
+ popup(BADT[o.e],'#ff3b3b');if(Math.random()<.5)popup(pick(PH,"ph"),"#fff",W/2,G.py-185,18);
+ if(G.stars>=5)die()}
+function collect(o){const g=GOOD[o.e];G.money+=g.m;
+ if(o.e==='🪙'){G.coins++;G.c67++;beep(990,.06,'square',.04,1480);if(G.coins%10===0)hap('coin');
+  if(G.c67>=67){G.c67=0;sixSeven()}}
+ else{popup(g.t,'#ffe600');hap('ok');tune([660,880,1320],'triangle',.06);particles('💸',6);
+  if(o.e==='💎'&&G.stars>0)G.stars--;
+  if(Math.random()<.6)popup(pick(PH,"ph"),"#fff",W/2,G.py-185,18)}}
+function sixSeven(){G.six=6.7;G.inv=0;bubble('SIX SEVEEEEN!!!',3);popup('SIX SEVEN!!!','#ffe600',W/2,G.py-120,30);hap('ok');particles('💸',14);
+ tune([392,523,659,784,1047,784,1047],'square',.07)}
+function die(){st='dead';G.shake=.6;hap('dead');beep(300,.9,'sawtooth',.1,50);
+ const c=CAUSE[G.last]&&Math.random()<.7?rand(CAUSE[G.last]):pick(CAUSE_ANY,'ca',3);
+ const rec=G.money>best;if(rec){best=G.money;saveBest()}
+ $('cause').textContent=c;$('stats').textContent='$'+G.money.toLocaleString('ru')+' · '+Math.floor(G.dist)+' м';
+ $('best').textContent=rec?'🏆 НОВЫЙ РЕКОРД!':'Рекорд: $'+best.toLocaleString('ru');$('rank').textContent='Рейтинг: '+rankOf(G.money);
+ setTimeout(()=>{wrap.classList.add('dead');const o=$('over');o.classList.add('show','wait');setTimeout(()=>o.classList.remove('wait'),700)},700)}
+
+function update(dt){G.t+=dt;
+ for(const f of G.fx){f.life-=dt;if(f.e){f.x+=f.vx*dt;f.y+=f.vy*dt;f.vy+=600*dt}else f.y-=40*dt}
+ G.fx=G.fx.filter(f=>f.life>0);G.shake=Math.max(0,G.shake-dt);
+ if(st!=='play')return;
+ G.speed=Math.min(820,260+G.t*7);const dy=G.speed*dt;G.dist+=dy/30;G.off=(G.off+dy)%60;
+ const s=G.dist>=1337?2:G.dist>=670?1:0;
+ if(s>G.stage){G.stage=s;G.money+=670*s;banner('МИССИЯ ВЫПОЛНЕНА','УВАЖЕНИЕ +','Дальше: '+STAGES[s]);tune([523,659,784,1047],'triangle',.07);hap('ok');
+  bubble(s===1?'братан, мы на бирже!':'братан, мы в космосе. это иксы',3)}
+ if(!G.moon&&G.dist>=6700){G.moon=true;G.money+=6700;banner('МИССИЯ ВЫПОЛНЕНА','УВАЖЕНИЕ +6700','Дальше — бесконечность');bubble('братан, я вышел на хаях',5);
+  tune([523,659,784,1047,1319,1568],'triangle',.08);hap('ok')}
+ if(G.moon&&G.moonY<H+300)G.moonY+=dy*.12;
+ G.px+=(LX(G.lane)-G.px)*Math.min(1,dt*16);
+ G.inv=Math.max(0,G.inv-dt);G.hitT=Math.max(0,G.hitT-dt);if(G.six>0){G.six-=dt;if(G.six<=0){G.six=0;popup('аура закончилась','#fff')}}
+ if(G.bub&&(G.bub.life-=dt)<=0)G.bub=null;if(G.banner&&(G.banner.life-=dt)<=0)G.banner=null;
+ if((G.shT-=dt)<=0){if(G.bub)G.shT=2;else{G.shT=10+Math.random()*5;bubble(pick(SHN,'shn'))}}
+ if((G.phT-=dt)<=0){G.phT=3+Math.random()*3;popup(pick(PH,'ph'),rand(['#fff','#ffe600','#00f0ff','#ff7ac6']),W/2+(Math.random()-.5)*60,H*.3+Math.random()*H*.25,17)}
+ G.decoAcc+=dy;while(G.decoAcc>=70){G.decoAcc-=70;addDeco(-40)}
+ for(const d of G.deco)d.y+=dy;G.deco=G.deco.filter(d=>d.y<H+80);
+ if((G.spawnT-=dt)<=0){spawnRow();G.spawnT=(250-Math.min(95,G.t*1.3))/G.speed}
+ for(const o of G.objs){o.y+=dy*(o.vy||1);
+  if(!o.done&&Math.abs(o.x-G.px)<42&&Math.abs(o.y-G.py)<56){
+   if(o.good){o.done=1;collect(o)}
+   else if(G.six>0){o.done=1;G.money+=67;popup('СНЕСЁН +67$','#ffe600',o.x,o.y);beep(200,.1,'square',.06,600)}
+   else if(G.inv<=0){o.done=1;hit(o);if(st!=='play')break}}}
+ G.objs=G.objs.filter(o=>o.y<H+60&&!(o.done&&o.good))}
+
+// ---------- Рисование ----------
+const SKY=[['#ff6fb5','#b03ad8','#3a0a5e'],['#06140d','#0e2a1a','#1b0f2e'],['#000','#12002a','#2a0845']];
+function sky(s){return grads[s]||(grads[s]=(()=>{const g=cx.createLinearGradient(0,0,0,H);SKY[s].forEach((c,i)=>g.addColorStop(i/2,c));return g})())}
+function drawBg(){const s=G.stage;cx.fillStyle=sky(s);cx.fillRect(0,0,W,H);
+ if(s===0){cx.fillStyle='rgba(255,230,0,.25)';cx.beginPath();cx.arc(W/2,-20,150,0,7);cx.fill();
+  cx.strokeStyle='rgba(255,255,255,.07)';cx.lineWidth=1;for(let y=(G.off*2)%40;y<H;y+=40){cx.beginPath();cx.moveTo(0,y);cx.lineTo(W,y);cx.stroke()}}
+ if(s>=1){cx.fillStyle='#fff';for(const p of SPACE_STARS){const y=(p.y+G.off*p.z*(s===2?4:1)+G.t*p.z*(s===2?60:8))%900;if(y<H){cx.globalAlpha=s===2?p.z:p.z*.25;cx.fillRect(p.x,y,p.z*2.2,p.z*2.2)}}cx.globalAlpha=1}
+ for(const d of G.deco){
+  if(d.e)de(d.e,d.x,d.y,d.s);
+  else if(d.k==='sw'){cx.fillStyle='rgba(40,120,90,.75)';cx.beginPath();cx.ellipse(d.x,d.y,26,18,0,0,7);cx.fill();de('🐊',d.x,d.y,18)}
+  else if(d.k==='ns'){cx.save();cx.translate(d.x,d.y);cx.rotate(-Math.PI/2);cx.fillStyle='rgba(0,0,0,.55)';rr(-34,-12,68,24,6);cx.fill();cx.strokeStyle=d.c;cx.lineWidth=2;cx.stroke();
+   txt(d.t,0,1,12,(G.t*4|0)%7?d.c:'#fff','center',0,60);cx.restore()}
+  else if(d.k==='cd'){const c=d.up?'#22e06b':'#ff3b3b';cx.fillStyle=c;cx.fillRect(d.x-1,d.y-d.h/2-10,2,d.h+20);cx.fillRect(d.x-8,d.y-d.h/2,16,d.h)}}
+ const rc=['rgba(30,14,44,.92)','rgba(10,22,20,.92)','rgba(40,0,80,.45)'][s],ec=['#00f0ff','#22e06b','#b388ff'][s];
+ cx.fillStyle=rc;cx.fillRect(60,0,240,H);
+ cx.fillStyle=ec;cx.globalAlpha=.25;cx.fillRect(55,0,10,H);cx.fillRect(295,0,10,H);cx.globalAlpha=1;cx.fillRect(59,0,3,H);cx.fillRect(298,0,3,H);
+ cx.fillStyle=s===1?'#ff3b3b':'rgba(255,255,255,.6)';for(let y=G.off-60;y<H;y+=60){cx.fillRect(139,y,3,30);cx.fillRect(219,y,3,30)}}
+function drawMoon(){if(!G.moon||G.moonY>H+250)return;const x=W/2,y=G.moonY;
+ cx.fillStyle='#d9d9e6';cx.beginPath();cx.arc(x,y,120,0,7);cx.fill();cx.fillStyle='#b4b4c8';
+ [[-50,-40,18],[40,30,24],[-20,60,12],[60,-50,10]].forEach(([a,b,r])=>{cx.beginPath();cx.arc(x+a,y+b,r,0,7);cx.fill()});
+ cx.fillStyle='#6b4423';cx.fillRect(x-3,y+60,6,50);cx.fillStyle='#fff8dc';rr(x-95,y+10,190,56,8);cx.fill();cx.strokeStyle='#6b4423';cx.lineWidth=3;cx.stroke();
+ txt('ЛУНА ПРОДАНА.',x,y+24,15,'#c00','center',0,180);txt('Рагпулл.',x,y+39,12,'#222','center',0,180);txt('Спасибо за ликвидность',x,y+54,12,'#222','center',0,180)}
+function drawCar(){if(G.inv>0&&((G.t*12)|0)%2)return;cx.save();cx.translate(G.px,G.py);cx.rotate((LX(G.lane)-G.px)*.004);
+ if(G.stage===2||G.six>0){const f=12+Math.random()*12;cx.fillStyle=G.six>0?'#ffe600':'#ff8c00';cx.beginPath();cx.moveTo(-14,44);cx.lineTo(-6,44+f);cx.lineTo(2,44);cx.moveTo(-2,44);cx.lineTo(6,44+f);cx.lineTo(14,44);cx.fill()}
+ cx.fillStyle=G.six>0?`hsla(${G.t*600%360},100%,60%,.45)`:'rgba(255,45,149,.28)';rr(-32,-52,64,104,20);cx.fill();
+ cx.fillStyle='#111';[[-28,-32],[24,-32],[-28,18],[24,18]].forEach(([a,b])=>cx.fillRect(a,b,4,16));
+ cx.fillStyle='#ff2d95';rr(-24,-46,48,92,14);cx.fill();cx.fillStyle='#ff8fd0';rr(-17,-42,34,16,6);cx.fill();
+ cx.fillStyle='#fff6a0';cx.fillRect(-20,-47,10,4);cx.fillRect(10,-47,10,4);cx.fillStyle='#ff003c';cx.fillRect(-21,43,10,4);cx.fillRect(11,43,10,4);
+ cx.fillStyle='#3a0d4d';rr(-20,-22,40,12,4);cx.fill();cx.fillStyle='#2a0a3d';rr(-20,-8,40,34,6);cx.fill();
+ de('😎',-9,4,18);de('😜',9,4,17);cx.strokeStyle='#ffd700';cx.lineWidth=2.5;cx.beginPath();cx.arc(-9,8,8,.3,Math.PI-.3);cx.stroke();
+ cx.fillStyle='#000';cx.fillRect(-23,-6,7,11);cx.fillStyle=(G.t*3|0)%2?'#f00':'#600';cx.beginPath();cx.arc(-19.5,-3,1.6,0,7);cx.fill();
+ cx.restore();txt('● LIVE',G.px-26,G.py+60,9,'#ff3b3b','center',2)}
+function drawBubble(){const b=G.bub;if(!b)return;cx.font='800 14px system-ui,-apple-system,Arial,sans-serif';const w=Math.min(W-20,cx.measureText(b.t).width+20);
+ let x=Math.max(10,Math.min(W-10-w,G.px+10-w/2)),y=G.py-108;cx.fillStyle='#fff';rr(x,y,w,30,12);cx.fill();cx.strokeStyle='#000';cx.lineWidth=2;cx.stroke();
+ cx.beginPath();cx.moveTo(G.px+4,y+30);cx.lineTo(G.px+12,y+44);cx.lineTo(G.px+16,y+30);cx.closePath();cx.fill();
+ cx.fillStyle='#000';cx.textAlign='center';cx.textBaseline='middle';cx.fillText(b.t,x+w/2,y+15,w-12);txt('ШНУРОК',x+10,y-7,9,'#ffe600','left',3)}
+function drawRadar(){const x=40,y=H-205,r=32;cx.save();cx.globalAlpha=.88;cx.beginPath();cx.arc(x,y,r,0,7);cx.fillStyle='#0d3b22';cx.fill();cx.lineWidth=3;cx.strokeStyle='#fff';cx.stroke();cx.clip();
+ cx.strokeStyle='rgba(120,255,160,.35)';cx.lineWidth=1;cx.beginPath();cx.moveTo(x-r,y);cx.lineTo(x+r,y);cx.moveTo(x,y-r);cx.lineTo(x,y+r);cx.stroke();
+ const a=G.t*3;cx.fillStyle='rgba(120,255,160,.25)';cx.beginPath();cx.moveTo(x,y);cx.arc(x,y,r,a,a+.7);cx.fill();
+ for(const o of G.objs){const dx=(o.x-G.px)/6,dy=(o.y-G.py)/7;if(dx*dx+dy*dy<r*r){cx.fillStyle=o.good?'#ffe600':'#ff2b2b';cx.fillRect(x+dx-2,y+dy-2,4,4)}}
+ cx.fillStyle='#fff';cx.beginPath();cx.moveTo(x,y-6);cx.lineTo(x+4,y+4);cx.lineTo(x-4,y+4);cx.fill();cx.restore()}
+function drawHud(){txt('$'+String(G.money).padStart(8,'0'),W-10,28,26,'#39d353','right',5);
+ for(let i=0;i<5;i++){const on=i<G.stars;txt('★',W-18-i*25,58,24,on?(G.hitT>0&&(G.t*16|0)%2?'#ff3b3b':'#fff'):'rgba(255,255,255,.18)','center',on?4:2)}
+ txt(STAGES[G.stage],56,18,13,'#ff7ac6','left',3);txt(Math.floor(G.dist)+' м',56,36,15,'#fff','left',3);txt('🪙 '+G.c67+'/67',56,54,13,'#ffe600','left',3);
+ drawRadar()}
+function draw(){cx.save();const sh=G.six>0?3:G.shake>0?G.shake*18:0;if(sh)cx.translate((Math.random()-.5)*sh,(Math.random()-.5)*sh);
+ drawBg();drawMoon();for(const o of G.objs)if(!o.done)de(o.e,o.x+Math.sin(G.t*3+(o.w||0))*(o.good?0:3),o.y,34);
+ drawCar();drawBubble();
+ for(const f of G.fx){cx.globalAlpha=Math.min(1,f.life*1.5);if(f.e)de(f.e,f.x,f.y,f.size);else txt(f.t,f.x,f.y,f.size,f.col,'center',4)}cx.globalAlpha=1;
+ if(G.six>0){cx.fillStyle=`hsla(${G.t*720%360},100%,55%,.16)`;cx.fillRect(-10,-10,W+20,H+20);const z=70+Math.sin(G.t*20)*12;
+  de('6️⃣',W/2-z*.55,H*.3,z);de('7️⃣',W/2+z*.55,H*.3,z);txt('SIX SEVEN · '+G.six.toFixed(1),W/2,H*.3+z*.8,18,'#ffe600')}
+ cx.restore();drawHud();
+ if(G.banner){const b=G.banner,y=H*.42;cx.fillStyle='rgba(0,0,0,.55)';cx.fillRect(0,y-46,W,b.c?108:84);
+  txt(b.a,W/2,y-18,26,'#ffd400','center',5);txt(b.b,W/2,y+16,22,'#ffd400','center',5);if(b.c)txt(b.c,W/2,y+46,14,'#fff','center',3)}}
+
+let lt=performance.now();
+function loop(now){const dt=Math.min(.05,Math.max(0,(now-lt)/1000));lt=now;update(dt);draw();requestAnimationFrame(loop)}
+
+// ---------- Ввод ----------
+function mv(d){unlock();if(st!=='play')return;const n=Math.max(0,Math.min(2,G.lane+d));if(n!==G.lane){G.lane=n;beep(d<0?520:640,.04,'triangle',.04)}}
+for(const[id,d]of[['L',-1],['R',1]]){const b=$(id);b.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();b.classList.add('on');mv(d)});
+ ['pointerup','pointerleave','pointercancel'].forEach(v=>b.addEventListener(v,()=>b.classList.remove('on')))}
+cv.addEventListener('pointerdown',e=>{e.preventDefault();const r=cv.getBoundingClientRect();mv(e.clientX-r.left<r.width/2?-1:1)});
+addEventListener('keydown',e=>{const k=e.key.toLowerCase();
+ if(k==='arrowleft'||k==='a'||k==='ф'){e.preventDefault();if(!e.repeat)mv(-1)}
+ else if(k==='arrowright'||k==='d'||k==='в'){e.preventDefault();if(!e.repeat)mv(1)}
+ else if((k===' '||k==='enter')&&st==='story')nextSlide()
+ else if((k===' '||k==='enter')&&st==='dead'&&!$('over').classList.contains('wait'))start()});
+$('mute').addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();muted=!muted;$('mute').textContent=muted?'🔇':'🔊';try{localStorage.setItem('mute67',muted?'1':'0')}catch(_){}unlock()});
+document.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+document.addEventListener('gesturestart',e=>e.preventDefault());
+document.addEventListener('dblclick',e=>e.preventDefault());
+
+// ---------- Сюжет и итоги ----------
+function showSlide(){$('sEmo').textContent=STORY[slide][0];$('sTxt').innerHTML=STORY[slide][1];$('dots').innerHTML=STORY.map((_,i)=>'<span class="'+(i===slide?'on':'')+'"></span>').join('')}
+function nextSlide(){unlock();beep(700,.05,'triangle',.04);if(++slide>=STORY.length)start();else showSlide()}
+$('story').addEventListener('pointerdown',e=>{e.preventDefault();nextSlide()});
+$('skip').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();start()});
+$('again').addEventListener('click',start);
+$('share').addEventListener('click',()=>{const url=SHARE_URL||location.href.split('#')[0],
+ t='Я поднял $'+G.money.toLocaleString('ru')+' и проехал '+Math.floor(G.dist)+' м в Бабло-Сити 🏎️🌕 Рейтинг: «'+rankOf(G.money)+'». Побьёшь?',
+ link='https://t.me/share/url?url='+encodeURIComponent(url)+'&text='+encodeURIComponent(t);
+ try{if(tg&&tg.initData){tg.openTelegramLink(link);return}}catch(e){}
+ if(navigator.share)navigator.share({text:t,url}).catch(()=>{});else window.open(link,'_blank')});
+
+addEventListener('resize',fit);fit();showSlide();requestAnimationFrame(loop);
+window.game={get G(){return G},get st(){return st},start,spawn(e,l,y){G.objs.push({e,l,x:LX(l),y:y===undefined?G.py:y,good:GOOD[e]?1:0,vy:0})}};
+</script>
+</body>
+</html>
